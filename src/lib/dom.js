@@ -107,41 +107,83 @@ export async function scanAndFilter(
     }
   });
 
-  /*
   if (imagesToScanAI.length > 0) {
     scanImagesAI(imagesToScanAI, settings);
   }
-  */
+}
+
+/**
+ * Fetches an image URL and converts it to a base64 string.
+ * @param {string} url
+ * @returns {Promise<string|null>}
+ */
+async function fetchImageAsBase64(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    // console.warn('Content Script fetch failed for:', url, error);
+    return null;
+  }
 }
 
 /**
  * Sends images to the background for AI analysis
+ * Uses a concurrency limit to prevent overwhelming the background/offscreen worker.
  */
 async function scanImagesAI(images, settings) {
-  images.forEach(async (img) => {
-    // Skip if already scanning or small images
-    if (img.dataset.trumpFilterScanning || img.width < 50 || img.height < 50)
-      return;
+  const CONCURRENCY_LIMIT = 3;
+  const queue = [...images];
+  let activeCount = 0;
+
+  const processNext = async () => {
+    if (queue.length === 0) return;
+
+    const img = queue.shift();
+
+    // Skip if already scanning or small images (re-check)
+    if (img.dataset.trumpFilterScanning || img.width < 50 || img.height < 50) {
+      return processNext();
+    }
 
     // Check if src is valid
-    if (!img.src || img.src.startsWith('data:')) return;
+    const src = img.currentSrc || img.src;
+    if (!src) {
+      return processNext();
+    }
 
+    activeCount++;
     img.dataset.trumpFilterScanning = 'true';
 
     try {
-      // We send the URL to background, background fetches it and sends to offscreen
-      // Or we can convert to base64 here if it's CORS safe, but URL is easier if background can fetch.
-      // Actually, offscreen can fetch too.
-      // But passing base64 is safer for CORS if we fetch in content script (which might fail too).
-      // Let's try sending URL first.
+      let base64Data = null;
+
+      if (src.startsWith('data:')) {
+        base64Data = src;
+      } else {
+        base64Data = await fetchImageAsBase64(src);
+      }
+
+      const payload = {
+        url: src,
+        strictMode: settings.sensitivity === 'strict',
+      };
+
+      if (base64Data) {
+        payload.base64 = base64Data;
+      }
 
       const response = await chrome.runtime.sendMessage({
         target: 'background',
         type: 'CHECK_IMAGE',
-        data: {
-          url: img.src,
-          strictMode: settings.sensitivity === 'strict',
-        },
+        data: payload,
       });
 
       if (response && response.success && response.isBlocked) {
@@ -154,8 +196,15 @@ async function scanImagesAI(images, settings) {
       console.error('Error scanning image with AI:', error);
     } finally {
       delete img.dataset.trumpFilterScanning;
+      activeCount--;
+      processNext();
     }
-  });
+  };
+
+  // Start initial batch
+  for (let i = 0; i < CONCURRENCY_LIMIT && i < images.length; i++) {
+    processNext();
+  }
 }
 
 function hideElement(el, reason) {

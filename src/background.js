@@ -36,15 +36,28 @@ async function handleBackgroundMessage(message, sender) {
   switch (message.type) {
     case 'CHECK_IMAGE':
       try {
-        // Fetch image and convert to base64
-        const response = await fetch(message.data.url);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        const base64Promise = new Promise((resolve) => {
-          reader.onloadend = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
-        const base64Data = await base64Promise;
+        let base64Data = message.data.base64;
+
+        // If no base64 provided (legacy or failed in content script), try to fetch here
+        if (!base64Data && message.data.url) {
+          try {
+            const response = await fetch(message.data.url);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            base64Data = await new Promise((resolve) => {
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
+          } catch (fetchError) {
+            console.error('Background fetch failed:', fetchError);
+            // Return success: false but with error details
+            return { success: false, error: fetchError.message };
+          }
+        }
+
+        if (!base64Data) {
+          return { success: false, error: 'No image data available' };
+        }
 
         // Forward to offscreen
         return await sendMessageToOffscreen('SCAN_IMAGE', {
