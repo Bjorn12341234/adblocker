@@ -1,20 +1,23 @@
 # plan.md (Execution Backlog)
 
 ## 🚦 Current Status
-* **Current Phase:** Phase 0 (Foundation Setup)
-* **Next Action:** Create Manifest V3 skeleton.
+
+- **Current Phase:** Phase 0 (Foundation Setup)
+- **Next Action:** Create Manifest V3 skeleton.
 
 ## Phase 0: Foundation Setup
-*Backpressure: npm run lint exits 0, Extension loads in Chrome without errors.*
 
-- [ ] Create Manifest V3 skeleton (`manifest.json`) with `offscreen` permission.
-- [ ] Setup ESLint + Prettier with pre-commit hooks.
+_Backpressure: npm run lint exits 0, Extension loads in Chrome without errors._
+
+- [x] Create Manifest V3 skeleton (`manifest.json`) with `offscreen` permission.
+- [x] Setup ESLint + Prettier with pre-commit hooks.
 - [ ] Create basic test harness (Jest/Puppeteer).
 - [ ] Implement storage schema with defaults (`lib/storage.js`).
 - [ ] Create build script (Webpack/Rollup for bundling models).
 
 ## Phase 1: Network Blocking Layer
-*Backpressure: Integration test shows blocked URL redirecting to block page.*
+
+_Backpressure: Integration test shows blocked URL redirecting to block page._
 
 - [ ] Implement `declarativeNetRequest` rule builder infrastructure.
 - [ ] Create Keyword → urlFilter converter logic.
@@ -23,7 +26,8 @@
 - [ ] Test: Verify URL blocking on `example.com/trump`.
 
 ## Phase 2: DOM Content Filtering
-*Backpressure: Performance < 100ms per scan on 500 elements.*
+
+_Backpressure: Performance < 100ms per scan on 500 elements._
 
 - [ ] Implement container selector system (`article`, `.card`, etc.).
 - [ ] Create text extraction logic (Headlines, Body, Links).
@@ -32,7 +36,8 @@
 - [ ] Implement element hiding logic (CSS `display:none` + `data-trump-filter-hidden`).
 
 ## Phase 3: Context-Aware Image Filtering (Free Tier)
-*Backpressure: Image with "Trump" alt text is hidden.*
+
+_Backpressure: Image with "Trump" alt text is hidden._
 
 - [ ] Implement Context Extractor (Alt text, Captions, Parent link).
 - [ ] Match context against keywords.
@@ -40,21 +45,24 @@
 - [ ] Add placeholder UI for hidden images.
 
 ## Phase 4: UI (Popup & Options)
-*Backpressure: Settings persist to storage and update active tabs.*
+
+_Backpressure: Settings persist to storage and update active tabs._
 
 - [ ] Create `popup.html` with Global Toggle and Site Exclusion.
 - [ ] Create `options.html` with Sensitivity Selector (Light/Balanced/Strict).
 - [ ] Implement "Stats" visualization (Items blocked).
 
 ## Phase 5: The GPU Worker (Offscreen Infrastructure)
-*Backpressure: Offscreen document loads and replies to "ping".*
+
+_Backpressure: Offscreen document loads and replies to "ping"._
 
 - [ ] Create `offscreen.html` and `offscreen.js`.
 - [ ] Implement `background.js` logic to spawn/manage the Offscreen Document.
 - [ ] Implement Messaging Bridge: Content Script -> Background -> Offscreen -> Background -> Content Script.
 
 ## Phase 6: Biometric & Concept Filtering (Premium Core)
-*Backpressure: Face detected >90% accuracy, SigLIP runs <200ms.*
+
+_Backpressure: Face detected >90% accuracy, SigLIP runs <200ms._
 
 - [ ] **Asset Prep:** Download and bundle `face_embedder.task` (MediaPipe) and `siglip-base-patch16-224-q8` (Transformers.js).
 - [ ] **Layer A (Face):** Initialize MediaPipe `FaceEmbedder` in Offscreen.
