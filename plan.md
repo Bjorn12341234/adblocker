@@ -2,8 +2,8 @@
 
 ## 🚦 Current Status
 
-- **Current Phase:** Phase 2 (DOM Content Filtering)
-- **Next Action:** Implement container selector system.
+- **Current Phase:** Phase 3 (Context-Aware Image Filtering - Free Tier)
+- **Next Action:** Implement Context Extractor for images.
 
 ## Phase 0: Foundation Setup
 
@@ -29,11 +29,11 @@ _Backpressure: Integration test shows blocked URL redirecting to block page._
 
 _Backpressure: Performance < 100ms per scan on 500 elements._
 
-- [ ] Implement container selector system (`article`, `.card`, etc.).
-- [ ] Create text extraction logic (Headlines, Body, Links).
-- [ ] Build Keyword Matcher (Case-insensitive + Whole word).
-- [ ] Add `MutationObserver` with 500ms debounce.
-- [ ] Implement element hiding logic (CSS `display:none` + `data-trump-filter-hidden`).
+- [x] Implement container selector system (`article`, `.card`, etc.).
+- [x] Create text extraction logic (Headlines, Body, Links).
+- [x] Build Keyword Matcher (Case-insensitive + Whole word).
+- [x] Add `MutationObserver` with 500ms debounce.
+- [x] Implement element hiding logic (CSS `display:none` + `data-trump-filter-hidden`).
 
 ## Phase 3: Context-Aware Image Filtering (Free Tier)
 
