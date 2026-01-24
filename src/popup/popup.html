@@ -14,7 +14,10 @@
     h2 {
       font-size: 18px;
       margin-top: 0;
-      color: #1a73e8;
+      color: #ff9800; /* Orange color */
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .toggle-group {
       display: flex;
@@ -61,7 +64,7 @@
       border-radius: 50%;
     }
     input:checked + .slider {
-      background-color: #1a73e8;
+      background-color: #ff9800; /* Orange toggle */
     }
     input:checked + .slider:before {
       transform: translateX(20px);
@@ -84,23 +87,34 @@
     .footer {
       margin-top: 16px;
       text-align: center;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
     }
     .btn {
       background: none;
-      border: 1px solid #1a73e8;
-      color: #1a73e8;
+      border: 1px solid #ff9800;
+      color: #ff9800;
       padding: 6px 12px;
       border-radius: 4px;
       cursor: pointer;
       font-size: 12px;
+      flex: 1;
     }
     .btn:hover {
-      background-color: #f1f8ff;
+      background-color: #fff3e0;
+    }
+    .btn-donate {
+      background-color: #ff9800;
+      color: white;
+    }
+    .btn-donate:hover {
+      background-color: #f57c00;
     }
   </style>
 </head>
 <body>
-  <h2>Trump Filter</h2>
+  <h2>TheOrangeFilter</h2>
   
   <div class="toggle-group">
     <span class="label">Filter Globally</span>
@@ -134,7 +148,8 @@
   </div>
 
   <div class="footer">
-    <button id="openOptions" class="btn">Advanced Settings</button>
+    <button id="openOptions" class="btn">Settings</button>
+    <button id="donateBtn" class="btn btn-donate">Donate</button>
   </div>
 
   <script src="popup.js"></script>
