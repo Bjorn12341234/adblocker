@@ -2,8 +2,8 @@
 
 ## 🚦 Current Status
 
-- **Current Phase:** Phase 4 (UI - Popup & Options)
-- **Next Action:** Create popup.html with Global Toggle and Site Exclusion.
+- **Current Phase:** Phase 5 (The GPU Worker - Offscreen Infrastructure)
+- **Next Action:** Create offscreen.html and offscreen.js.
 
 ## Phase 0: Foundation Setup
 
@@ -48,9 +48,9 @@ _Backpressure: Image with "Trump" alt text is hidden._
 
 _Backpressure: Settings persist to storage and update active tabs._
 
-- [ ] Create `popup.html` with Global Toggle and Site Exclusion.
-- [ ] Create `options.html` with Sensitivity Selector (Light/Balanced/Strict).
-- [ ] Implement "Stats" visualization (Items blocked).
+- [x] Create `popup.html` with Global Toggle and Site Exclusion.
+- [x] Create `options.html` with Sensitivity Selector (Light/Balanced/Strict).
+- [x] Implement "Stats" visualization (Items blocked).
 
 ## Phase 5: The GPU Worker (Offscreen Infrastructure)
 

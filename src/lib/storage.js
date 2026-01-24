@@ -8,7 +8,7 @@ const DEFAULT_SETTINGS = {
   },
   lists: {
     whitelist: ['example.com'],
-    userKeywords: [],
+    userKeywords: ['trump'],
   },
 };
 
