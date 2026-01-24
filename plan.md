@@ -2,8 +2,8 @@
 
 ## 🚦 Current Status
 
-- **Current Phase:** Phase 5 (The GPU Worker - Offscreen Infrastructure)
-- **Next Action:** Create offscreen.html and offscreen.js.
+- **Current Phase:** Phase 6 (Biometric & Concept Filtering - Premium Core)
+- **Next Action:** Download and bundle ML model assets.
 
 ## Phase 0: Foundation Setup
 
@@ -56,9 +56,9 @@ _Backpressure: Settings persist to storage and update active tabs._
 
 _Backpressure: Offscreen document loads and replies to "ping"._
 
-- [ ] Create `offscreen.html` and `offscreen.js`.
-- [ ] Implement `background.js` logic to spawn/manage the Offscreen Document.
-- [ ] Implement Messaging Bridge: Content Script -> Background -> Offscreen -> Background -> Content Script.
+- [x] Create `offscreen.html` and `offscreen.js`.
+- [x] Implement `background.js` logic to spawn/manage the Offscreen Document.
+- [x] Implement Messaging Bridge: Content Script -> Background -> Offscreen -> Background -> Content Script.
 
 ## Phase 6: Biometric & Concept Filtering (Premium Core)
 

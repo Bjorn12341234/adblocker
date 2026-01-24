@@ -1,4 +1,4 @@
-import { updateRules } from '../src/lib/backgroundLogic';
+import { updateRules, setupOffscreen } from '../src/lib/backgroundLogic';
 import * as storage from '../src/lib/storage';
 import * as rules from '../src/lib/rules';
 
@@ -10,6 +10,8 @@ describe('Background Logic', () => {
   const originalChrome = global.chrome;
   const mockUpdateDynamicRules = jest.fn();
   const mockGetDynamicRules = jest.fn();
+  const mockCreateDocument = jest.fn();
+  const mockGetContexts = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -17,6 +19,12 @@ describe('Background Logic', () => {
       declarativeNetRequest: {
         getDynamicRules: mockGetDynamicRules,
         updateDynamicRules: mockUpdateDynamicRules,
+      },
+      offscreen: {
+        createDocument: mockCreateDocument,
+      },
+      runtime: {
+        getContexts: mockGetContexts,
       },
     };
 
@@ -27,6 +35,8 @@ describe('Background Logic', () => {
     rules.generateRules.mockReturnValue([]);
     mockGetDynamicRules.mockResolvedValue([]);
     mockUpdateDynamicRules.mockResolvedValue();
+    mockCreateDocument.mockResolvedValue();
+    mockGetContexts.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -66,5 +76,24 @@ describe('Background Logic', () => {
     );
 
     consoleSpy.mockRestore();
+  });
+
+  describe('Offscreen Management', () => {
+    test('setupOffscreen creates document if none exists', async () => {
+      mockGetContexts.mockResolvedValue([]);
+      await setupOffscreen();
+      expect(mockGetContexts).toHaveBeenCalledWith({
+        contextTypes: ['OFFSCREEN_DOCUMENT'],
+      });
+      expect(mockCreateDocument).toHaveBeenCalled();
+    });
+
+    test('setupOffscreen does not create document if one already exists', async () => {
+      mockGetContexts.mockResolvedValue([
+        { contextType: 'OFFSCREEN_DOCUMENT' },
+      ]);
+      await setupOffscreen();
+      expect(mockCreateDocument).not.toHaveBeenCalled();
+    });
   });
 });
