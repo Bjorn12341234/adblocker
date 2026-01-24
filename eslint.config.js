@@ -14,6 +14,7 @@ module.exports = [
         ...globals.browser,
         ...globals.webextensions,
         ...globals.jest,
+        ...globals.node,
       },
     },
     rules: {

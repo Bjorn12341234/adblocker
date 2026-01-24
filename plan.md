@@ -12,7 +12,7 @@ _Backpressure: npm run lint exits 0, Extension loads in Chrome without errors._
 - [x] Create Manifest V3 skeleton (`manifest.json`) with `offscreen` permission.
 - [x] Setup ESLint + Prettier with pre-commit hooks.
 - [x] Create basic test harness (Jest/Puppeteer).
-- [ ] Implement storage schema with defaults (`lib/storage.js`).
+- [x] Implement storage schema with defaults (`lib/storage.js`).
 - [ ] Create build script (Webpack/Rollup for bundling models).
 
 ## Phase 1: Network Blocking Layer
