@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
+    "build": "webpack",
+    "watch": "webpack --watch",
     "lint": "eslint .",
     "format": "prettier --write .",
     "prepare": "husky"
@@ -30,6 +32,7 @@
     "@babel/core": "^7.28.6",
     "@babel/preset-env": "^7.28.6",
     "babel-jest": "^30.2.0",
+    "copy-webpack-plugin": "^13.0.1",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.1.0",
@@ -37,6 +40,8 @@
     "jest": "^30.2.0",
     "lint-staged": "^16.2.7",
     "prettier": "^3.8.1",
-    "puppeteer": "^24.36.0"
+    "puppeteer": "^24.36.0",
+    "webpack": "^5.104.1",
+    "webpack-cli": "^6.0.1"
   }
 }

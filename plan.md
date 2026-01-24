@@ -13,7 +13,7 @@ _Backpressure: npm run lint exits 0, Extension loads in Chrome without errors._
 - [x] Setup ESLint + Prettier with pre-commit hooks.
 - [x] Create basic test harness (Jest/Puppeteer).
 - [x] Implement storage schema with defaults (`lib/storage.js`).
-- [ ] Create build script (Webpack/Rollup for bundling models).
+- [x] Create build script (Webpack/Rollup for bundling models).
 
 ## Phase 1: Network Blocking Layer
 

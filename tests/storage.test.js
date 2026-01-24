@@ -1,4 +1,4 @@
-import { getStorage, setStorage, defaults } from '../lib/storage';
+import { getStorage, setStorage, defaults } from '../src/lib/storage';
 
 describe('Storage', () => {
   const originalChrome = global.chrome;
