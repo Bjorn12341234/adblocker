@@ -1,0 +1,2478 @@
+PROJECT ROOT: /home/bjorn/projects/adblocker
+====================================================================================================
+
+FILE TREE
+----------------------------------------------------------------------------------------------------
+.geminiignore
+.gitignore
+.husky/
+.husky/_/
+.husky/_/.gitignore
+.husky/_/applypatch-msg
+.husky/_/commit-msg
+.husky/_/h
+.husky/_/husky.sh
+.husky/_/post-applypatch
+.husky/_/post-checkout
+.husky/_/post-commit
+.husky/_/post-merge
+.husky/_/post-rewrite
+.husky/_/pre-applypatch
+.husky/_/pre-auto-gc
+.husky/_/pre-commit
+.husky/_/pre-merge-commit
+.husky/_/pre-push
+.husky/_/pre-rebase
+.husky/_/prepare-commit-msg
+.husky/pre-commit
+.prettierrc
+README.md
+all_files.py
+babel.config.js
+context.md
+eslint.config.js
+jest.config.js
+manifest.json
+package-lock.json
+package.json
+plan.md
+project_dump.txt
+scripts/
+scripts/download_models.js
+spec.md
+src/
+src/assets/
+src/assets/models/
+src/assets/models/siglip-base-patch16-224/
+src/assets/models/siglip-base-patch16-224/config.json
+src/assets/models/siglip-base-patch16-224/model_quantized.onnx
+src/assets/models/siglip-base-patch16-224/preprocessor_config.json
+src/assets/models/siglip-base-patch16-224/tokenizer_config.json
+src/assets/models/trump_vectors.json
+src/background.js
+src/content.js
+src/lib/
+src/lib/backgroundLogic.js
+src/lib/dom.js
+src/lib/rules.js
+src/lib/storage.js
+src/offscreen/
+src/offscreen/offscreen.html
+src/offscreen/offscreen.js
+src/options/
+src/options/options.html
+src/options/options.js
+src/popup/
+src/popup/popup.html
+src/popup/popup.js
+tests/
+tests/backgroundLogic.test.js
+tests/dom.test.js
+tests/rules.test.js
+tests/setup.test.js
+tests/storage.test.js
+webpack.config.js
+
+
+FILE CONTENTS
+----------------------------------------------------------------------------------------------------
+
+====================================================================================================
+FILE: .husky/_/husky.sh
+====================================================================================================
+
+echo "husky - DEPRECATED
+
+Please remove the following two lines from $0:
+
+#!/usr/bin/env sh
+. \"\$(dirname -- \"\$0\")/_/husky.sh\"
+
+They WILL FAIL in v10.0.0
+"
+====================================================================================================
+FILE: README.md
+====================================================================================================
+
+# Trump Filter Extension
+
+A privacy-first Chrome Extension that filters specific topics (default: "Trump") from your browsing feed using Network blocking, DOM text analysis, and local AI image processing.
+
+## 🚀 How to Run (Install in Chrome)
+
+1.  **Build the Project:**
+    Ensure you have the latest build.
+    ```bash
+    npm run build
+    ```
+
+2.  **Load into Chrome:**
+    *   Open Chrome and navigate to `chrome://extensions`.
+    *   Enable **Developer mode** (toggle in the top right).
+    *   Click **Load unpacked**.
+    *   Select the **`dist`** folder inside this project directory (`/home/bjorn/projects/adblocker/dist`).
+
+## 🎮 How to Test
+
+### Manual Testing
+1.  **Basic Filtering:**
+    *   Go to a website containing the keyword "Trump" (e.g., a news site or Wikipedia).
+    *   Observe that articles or paragraphs containing the keyword are hidden (or replaced with a placeholder).
+    *   Click the extension icon in the toolbar to see the blocked item count.
+
+2.  **AI Image Filtering (Premium/Experimental):**
+    *   Click the extension icon to open the **Popup**.
+    *   Toggle **"AI Image Filtering"** ON.
+    *   Accept the **Privacy Consent** dialog (required for local AI processing).
+    *   Reload the page. Images matching the "Trump" face vectors or context should now be scanned and hidden if they match.
+    *   *Note:* The first run might take a moment to initialize the offscreen document.
+
+### Automated Testing
+Run the included unit and integration tests:
+```bash
+npm test
+```
+
+## 🛠️ Development
+
+*   **Watch Mode:** `npm run watch` (Rebuilds on file changes).
+*   **Linting:** `npm run lint` (Checks code style).
+
+====================================================================================================
+FILE: all_files.py
+====================================================================================================
+
+#!/usr/bin/env python3
+"""
+all_files.py
+
+Creates a deterministic, source-focused dump of the adblocker project.
+
+Includes:
+- Filtered project tree
+- File contents for text / source files
+- Skips binaries and large artifacts
+
+Excludes:
+- node_modules/
+- dist/
+- coverage/
+- .git/
+- .gemini/
+- .DS_Store
+- *.log
+- tokenizer.json in siglip model folder
+- Any file larger than 0.5 MB
+
+Output:
+  project_dump.txt (project root)
+"""
+
+from pathlib import Path
+import fnmatch
+
+# --------------------------------------------------------------------------------------
+# Configuration
+# --------------------------------------------------------------------------------------
+
+PROJECT_ROOT = Path("/home/bjorn/projects/adblocker")
+OUTPUT_FILE = PROJECT_ROOT / "project_dump.txt"
+
+EXCLUDE_DIRS = {
+    "node_modules",
+    "dist",
+    "coverage",
+    ".git",
+    ".gemini",
+}
+
+EXCLUDE_FILES = {
+    ".DS_Store",
+}
+
+EXCLUDE_PATTERNS = [
+    "*.log",
+]
+
+# Explicit file to exclude
+EXPLICIT_EXCLUDES = {
+    PROJECT_ROOT / "src/assets/models/siglip-base-patch16-224/tokenizer.json"
+}
+
+# Allowed text extensions
+ALLOWED_EXTENSIONS = {
+    ".py", ".js", ".ts", ".tsx", ".jsx",
+    ".md", ".txt", ".yml", ".yaml",
+    ".html", ".css", ".scss",
+    ".sh", ".bash",
+    ".env",
+}
+
+MAX_FILE_SIZE = 512 * 1024  # 0.5 MB
+
+# --------------------------------------------------------------------------------------
+# Helpers
+# --------------------------------------------------------------------------------------
+
+def is_excluded(path: Path) -> bool:
+    # Explicit path exclusion
+    try:
+        if path.resolve() in EXPLICIT_EXCLUDES:
+            return True
+    except Exception:
+        pass
+
+    parts = set(path.parts)
+
+    # Excluded directories
+    if any(part in EXCLUDE_DIRS for part in parts):
+        return True
+
+    # Excluded filenames
+    if path.name in EXCLUDE_FILES:
+        return True
+
+    # Excluded patterns
+    for pattern in EXCLUDE_PATTERNS:
+        if fnmatch.fnmatch(path.name, pattern):
+            return True
+
+    return False
+
+
+def is_allowed_file(path: Path) -> bool:
+    if not path.is_file():
+        return False
+
+    # Extension filter
+    if path.suffix.lower() not in ALLOWED_EXTENSIONS:
+        return False
+
+    # Size filter (hard limit 0.5 MB)
+    try:
+        if path.stat().st_size > MAX_FILE_SIZE:
+            return False
+    except OSError:
+        return False
+
+    return True
+
+
+def collect_tree(root: Path):
+    files = []
+    for path in sorted(root.rglob("*")):
+        if is_excluded(path):
+            continue
+        files.append(path)
+    return files
+
+
+# --------------------------------------------------------------------------------------
+# Main dump logic
+# --------------------------------------------------------------------------------------
+
+def main():
+    entries = collect_tree(PROJECT_ROOT)
+
+    with OUTPUT_FILE.open("w", encoding="utf-8", errors="replace") as out:
+        out.write(f"PROJECT ROOT: {PROJECT_ROOT}\n")
+        out.write("=" * 100 + "\n\n")
+
+        # ---------------- Tree Section ----------------
+        out.write("FILE TREE\n")
+        out.write("-" * 100 + "\n")
+        for path in entries:
+            rel = path.relative_to(PROJECT_ROOT)
+            out.write(str(rel) + ("\n" if path.is_file() else "/\n"))
+
+        out.write("\n\n")
+
+        # ---------------- File Contents Section ----------------
+        out.write("FILE CONTENTS\n")
+        out.write("-" * 100 + "\n")
+
+        for path in entries:
+            if not is_allowed_file(path):
+                continue
+
+            rel = path.relative_to(PROJECT_ROOT)
+
+            out.write("\n" + "=" * 100 + "\n")
+            out.write(f"FILE: {rel}\n")
+            out.write("=" * 100 + "\n\n")
+
+            try:
+                with path.open("r", encoding="utf-8", errors="replace") as f:
+                    out.write(f.read())
+            except Exception as e:
+                out.write(f"[ERROR READING FILE: {e}]\n")
+
+    print(f"Project dump written to: {OUTPUT_FILE}")
+
+
+if __name__ == "__main__":
+    main()
+
+
+====================================================================================================
+FILE: babel.config.js
+====================================================================================================
+
+module.exports = {
+  presets: [['@babel/preset-env', { targets: { node: 'current' } }]],
+};
+
+====================================================================================================
+FILE: context.md
+====================================================================================================
+
+# context.md
+
+## 🤖 The Ralph Coding Methodology
+**Active Protocol:** Autonomous Iterative Loop (Ralph Loop).
+
+You are an intelligent agent operating in a loop. Your memory is file-based. You do not rely on conversation history for technical details; you rely on these three files:
+1. **context.md** (This file): High-level goals, methodology, and constraints.
+2. **plan.md**: The source of truth for progress. It contains the backlog and current status.
+3. **spec.md**: The source of truth for requirements. It defines technical implementation details.
+
+### Your Workflow Loop
+For every iteration, you must:
+1. **READ** `plan.md` to find the first unchecked item (`- [ ]`) in the active Phase.
+2. **READ** `spec.md` to understand the technical constraints for that specific item.
+3. **EXECUTE** the task (Generate code, write tests, or create assets).
+4. **VERIFY** via Backpressure (Lint, Test, Browser Load).
+5. **UPDATE** `plan.md`: Mark the task as completed (`- [x]`).
+6. **STOP**. Do not attempt multiple phases in one go. Small, atomic commits.
+
+---
+
+## 🛡️ Core Constraints (Non-Negotiable)
+**Security & Privacy Red Lines**
+* ❌ NO remote code execution (CSP `unsafe-eval` forbidden).
+* ❌ NO data exfiltration to external servers.
+* ❌ NO cloud-based inference.
+* ❌ NO CDN loading for Models (Must be bundled locally).
+* ✅ **Architecture:** Heavy AI runs in an **Offscreen Document**, not the Service Worker.
+* ✅ **Biometric Scope:** Local-only identification using pre-calculated reference vectors.
+
+**Definition of Done**
+A task is done when:
+* The code exists and follows the `spec.md`.
+* The `plan.md` entry is marked with `[x]`.
+* Tests (if applicable) pass.
+* Linter passes with no errors.
+
+---
+
+## 📦 Product Context
+**Product:** Trump Filter (Chrome Extension - Manifest V3)
+**Core Value:** Privacy-first topic filtering (Text & Image) with Local AI.
+
+**Problem Statement**
+Users experience content fatigue. They want control over what topics AND IMAGES appear in their feed without leaving their favorite news sites.
+
+**Solution (The Cascade Architecture)**
+1.  **Network (Layer 0):** Blocks Trump-related URLs before page loads.
+2.  **DOM (Layer 1):** Hides Trump-related articles/cards on pages via text analysis.
+3.  **Premium (Layer 2 - The Cascade):**
+    * *Step A (Fast):* **MediaPipe Face Embedder** detects faces and compares against local Trump vectors (15ms).
+    * *Step B (Smart):* **SigLIP** (Transformers.js) analyzes context/content only if "Strict Mode" is enabled (150ms).
+
+**Architecture Principles**
+* **Privacy Over Features:** If it requires data exfiltration, we don't build it.
+* **Local Over Cloud:** All models (MediaPipe .task, ONNX .quant) must be bundled and run via WebGPU/Wasm.
+* **Resource Efficiency:** Use the "Cascade" to avoid running heavy SigLIP models on every image.
+
+====================================================================================================
+FILE: eslint.config.js
+====================================================================================================
+
+const js = require('@eslint/js');
+const prettier = require('eslint-config-prettier');
+const globals = require('globals');
+
+module.exports = [
+  { ignores: ['eslint.config.js', 'dist/', 'scripts/', 'src/assets/'] },
+  js.configs.recommended,
+  prettier,
+  {
+    languageOptions: {
+      ecmaVersion: 12,
+      sourceType: 'module',
+      globals: {
+        ...globals.browser,
+        ...globals.webextensions,
+        ...globals.jest,
+        ...globals.node,
+      },
+    },
+    rules: {
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    },
+  },
+];
+
+====================================================================================================
+FILE: jest.config.js
+====================================================================================================
+
+module.exports = {
+  testEnvironment: 'node',
+  verbose: true,
+};
+
+====================================================================================================
+FILE: plan.md
+====================================================================================================
+
+# plan.md (Execution Backlog)
+
+## 🚦 Current Status
+
+- **Current Phase:** COMPLETED
+- **Next Action:** None.
+
+## Phase 0: Foundation Setup
+
+_Backpressure: npm run lint exits 0, Extension loads in Chrome without errors._
+
+- [x] Create Manifest V3 skeleton (`manifest.json`) with `offscreen` permission.
+- [x] Setup ESLint + Prettier with pre-commit hooks.
+- [x] Create basic test harness (Jest/Puppeteer).
+- [x] Implement storage schema with defaults (`lib/storage.js`).
+- [x] Create build script (Webpack/Rollup for bundling models).
+
+## Phase 1: Network Blocking Layer
+
+_Backpressure: Integration test shows blocked URL redirecting to block page._
+
+- [x] Implement `declarativeNetRequest` rule builder infrastructure.
+- [x] Create Keyword → urlFilter converter logic.
+- [x] Implement Whitelist priority rules (Spec FR-8).
+- [x] Add Service Worker rule updater.
+- [x] Test: Verify URL blocking on `example.com/trump`.
+
+## Phase 2: DOM Content Filtering
+
+_Backpressure: Performance < 100ms per scan on 500 elements._
+
+- [x] Implement container selector system (`article`, `.card`, etc.).
+- [x] Create text extraction logic (Headlines, Body, Links).
+- [x] Build Keyword Matcher (Case-insensitive + Whole word).
+- [x] Add `MutationObserver` with 500ms debounce.
+- [x] Implement element hiding logic (CSS `display:none` + `data-trump-filter-hidden`).
+
+## Phase 3: Context-Aware Image Filtering (Free Tier)
+
+_Backpressure: Image with "Trump" alt text is hidden._
+
+- [x] Implement Context Extractor (Alt text, Captions, Parent link).
+- [x] Match context against keywords.
+- [x] Hide images/video posters when context matches.
+- [x] Add placeholder UI for hidden images.
+
+## Phase 4: UI (Popup & Options)
+
+_Backpressure: Settings persist to storage and update active tabs._
+
+- [x] Create `popup.html` with Global Toggle and Site Exclusion.
+- [x] Create `options.html` with Sensitivity Selector (Light/Balanced/Strict).
+- [x] Implement "Stats" visualization (Items blocked).
+
+## Phase 5: The GPU Worker (Offscreen Infrastructure)
+
+_Backpressure: Offscreen document loads and replies to "ping"._
+
+- [x] Create `offscreen.html` and `offscreen.js`.
+- [x] Implement `background.js` logic to spawn/manage the Offscreen Document.
+- [x] Implement Messaging Bridge: Content Script -> Background -> Offscreen -> Background -> Content Script.
+
+## Phase 6: Biometric & Concept Filtering (Premium Core)
+
+_Backpressure: Face detected >90% accuracy, SigLIP runs <200ms._
+
+- [x] **Asset Prep:** Download and bundle `face_embedder.task` (MediaPipe) and `siglip-base-patch16-224-q8` (Transformers.js).
+- [x] **Layer A (Face):** Initialize MediaPipe `FaceEmbedder` in Offscreen.
+- [x] **Layer A (Face):** Create/Load "Trump Reference Vectors" (JSON).
+- [x] **Layer A (Face):** Implement `isTrumpFace()` logic (Cosine Similarity).
+- [x] **Layer B (Concept):** Initialize Transformers.js `pipeline` in Offscreen (WebGPU).
+- [x] **Layer B (Concept):** Implement `scanContext()` logic (Zero-shot classification).
+- [x] **Integration:** Connect Content Script image scanner to the Offscreen Cascade.
+- [x] **Privacy:** Implement "Opt-In" Consent Dialog (GDPR).
+
+====================================================================================================
+FILE: project_dump.txt
+====================================================================================================
+
+PROJECT ROOT: /home/bjorn/projects/adblocker
+====================================================================================================
+
+FILE TREE
+----------------------------------------------------------------------------------------------------
+.geminiignore
+.gitignore
+.husky/
+.husky/_/
+.husky/_/.gitignore
+.husky/_/applypatch-msg
+.husky/_/commit-msg
+.husky/_/h
+.husky/_/husky.sh
+.husky/_/post-applypatch
+.husky/_/post-checkout
+.husky/_/post-commit
+.husky/_/post-merge
+.husky/_/post-rewrite
+.husky/_/pre-applypatch
+.husky/_/pre-auto-gc
+.husky/_/pre-commit
+.husky/_/pre-merge-commit
+.husky/_/pre-push
+.husky/_/pre-rebase
+.husky/_/prepare-commit-msg
+.husky/pre-commit
+.prettierrc
+README.md
+all_files.py
+babel.config.js
+context.md
+eslint.config.js
+jest.config.js
+manifest.json
+package-lock.json
+package.json
+plan.md
+project_dump.txt
+scripts/
+scripts/download_models.js
+spec.md
+src/
+src/assets/
+src/assets/models/
+src/assets/models/siglip-base-patch16-224/
+src/assets/models/siglip-base-patch16-224/config.json
+src/assets/models/siglip-base-patch16-224/model_quantized.onnx
+src/assets/models/siglip-base-patch16-224/preprocessor_config.json
+src/assets/models/siglip-base-patch16-224/tokenizer_config.json
+src/assets/models/trump_vectors.json
+src/background.js
+src/content.js
+src/lib/
+src/lib/backgroundLogic.js
+src/lib/dom.js
+src/lib/rules.js
+src/lib/storage.js
+src/offscreen/
+src/offscreen/offscreen.html
+src/offscreen/offscreen.js
+src/options/
+src/options/options.html
+src/options/options.js
+src/popup/
+src/popup/popup.html
+src/popup/popup.js
+tests/
+tests/backgroundLogic.test.js
+tests/dom.test.js
+tests/rules.test.js
+tests/setup.test.js
+tests/storage.test.js
+webpack.config.js
+
+
+FILE CONTENTS
+----------------------------------------------------------------------------------------------------
+
+====================================================================================================
+FILE: .husky/_/husky.sh
+====================================================================================================
+
+echo "husky - DEPRECATED
+
+Please remove the following two lines from $0:
+
+#!/usr/bin/env sh
+. \"\$(dirname -- \"\$0\")/_/husky.sh\"
+
+They WILL FAIL in v10.0.0
+"
+====================================================================================================
+FILE: README.md
+====================================================================================================
+
+# Trump Filter Extension
+
+A privacy-first Chrome Extension that filters specific topics (default: "Trump") from your browsing feed using Network blocking, DOM text analysis, and local AI image processing.
+
+## 🚀 How to Run (Install in Chrome)
+
+1.  **Build the Project:**
+    Ensure you have the latest build.
+    ```bash
+    npm run build
+    ```
+
+2.  **Load into Chrome:**
+    *   Open Chrome and navigate to `chrome://extensions`.
+    *   Enable **Developer mode** (toggle in the top right).
+    *   Click **Load unpacked**.
+    *   Select the **`dist`** folder inside this project directory (`/home/bjorn/projects/adblocker/dist`).
+
+## 🎮 How to Test
+
+### Manual Testing
+1.  **Basic Filtering:**
+    *   Go to a website containing the keyword "Trump" (e.g., a news site or Wikipedia).
+    *   Observe that articles or paragraphs containing the keyword are hidden (or replaced with a placeholder).
+    *   Click the extension icon in the toolbar to see the blocked item count.
+
+2.  **AI Image Filtering (Premium/Experimental):**
+    *   Click the extension icon to open the **Popup**.
+    *   Toggle **"AI Image Filtering"** ON.
+    *   Accept the **Privacy Consent** dialog (required for local AI processing).
+    *   Reload the page. Images matching the "Trump" face vectors or context should now be scanned and hidden if they match.
+    *   *Note:* The first run might take a moment to initialize the offscreen document.
+
+### Automated Testing
+Run the included unit and integration tests:
+```bash
+npm test
+```
+
+## 🛠️ Development
+
+*   **Watch Mode:** `npm run watch` (Rebuilds on file changes).
+*   **Linting:** `npm run lint` (Checks code style).
+
+====================================================================================================
+FILE: all_files.py
+====================================================================================================
+
+#!/usr/bin/env python3
+"""
+all_files.py
+
+Creates a deterministic, source-focused dump of the adblocker project.
+
+Includes:
+- Filtered project tree
+- File contents for text / source files
+- Skips binaries and large artifacts
+
+Excludes:
+- node_modules/
+- dist/
+- coverage/
+- .git/
+- .gemini/
+- .DS_Store
+- *.log
+- tokenizer.json in siglip model folder
+- Any file larger than 0.5 MB
+
+Output:
+  project_dump.txt (project root)
+"""
+
+from pathlib import Path
+import fnmatch
+
+# --------------------------------------------------------------------------------------
+# Configuration
+# --------------------------------------------------------------------------------------
+
+PROJECT_ROOT = Path("/home/bjorn/projects/adblocker")
+OUTPUT_FILE = PROJECT_ROOT / "project_dump.txt"
+
+EXCLUDE_DIRS = {
+    "node_modules",
+    "dist",
+    "coverage",
+    ".git",
+    ".gemini",
+}
+
+EXCLUDE_FILES = {
+    ".DS_Store",
+}
+
+EXCLUDE_PATTERNS = [
+    "*.log",
+]
+
+# Explicit file to exclude
+EXPLICIT_EXCLUDES = {
+    PROJECT_ROOT / "src/assets/models/siglip-base-patch16-224/tokenizer.json"
+}
+
+# Allowed text extensions
+ALLOWED_EXTENSIONS = {
+    ".py", ".js", ".ts", ".tsx", ".jsx",
+    ".md", ".txt", ".yml", ".yaml",
+    ".html", ".css", ".scss",
+    ".sh", ".bash",
+    ".env",
+}
+
+MAX_FILE_SIZE = 512 * 1024  # 0.5 MB
+
+# --------------------------------------------------------------------------------------
+# Helpers
+# --------------------------------------------------------------------------------------
+
+def is_excluded(path: Path) -> bool:
+    # Explicit path exclusion
+    try:
+        if path.resolve() in EXPLICIT_EXCLUDES:
+            return True
+    except Exception:
+        pass
+
+    parts = set(path.parts)
+
+    # Excluded directories
+    if any(part in EXCLUDE_DIRS for part in parts):
+        return True
+
+    # Excluded filenames
+    if path.name in EXCLUDE_FILES:
+        return True
+
+    # Excluded patterns
+    for pattern in EXCLUDE_PATTERNS:
+        if fnmatch.fnmatch(path.name, pattern):
+            return True
+
+    return False
+
+
+def is_allowed_file(path: Path) -> bool:
+    if not path.is_file():
+        return False
+
+    # Extension filter
+    if path.suffix.lower() not in ALLOWED_EXTENSIONS:
+        return False
+
+    # Size filter (hard limit 0.5 MB)
+    try:
+        if path.stat().st_size > MAX_FILE_SIZE:
+            return False
+    except OSError:
+        return False
+
+    return True
+
+
+def collect_tree(root: Path):
+    files = []
+    for path in sorted(root.rglob("*")):
+        if is_excluded(path):
+            continue
+        files.append(path)
+    return files
+
+
+# --------------------------------------------------------------------------------------
+# Main dump logic
+# --------------------------------------------------------------------------------------
+
+def main():
+    entries = collect_tree(PROJECT_ROOT)
+
+    with OUTPUT_FILE.open("w", encoding="utf-8", errors="replace") as out:
+        out.write(f"PROJECT ROOT: {PROJECT_ROOT}\n")
+        out.write("=" * 100 + "\n\n")
+
+        # ---------------- Tree Section ----------------
+        out.write("FILE TREE\n")
+        out.write("-" * 100 + "\n")
+        for path in entries:
+            rel = path.relative_to(PROJECT_ROOT)
+            out.write(str(rel) + ("\n" if path.is_file() else "/\n"))
+
+        out.write("\n\n")
+
+        # ---------------- File Contents Section ----------------
+        out.write("FILE CONTENTS\n")
+        out.write("-" * 100 + "\n")
+
+        for path in entries:
+            if not is_allowed_file(path):
+                continue
+
+            rel = path.relative_to(PROJECT_ROOT)
+
+            out.write("\n" + "=" * 100 + "\n")
+            out.write(f"FILE: {rel}\n")
+            out.write("=" * 100 + "\n\n")
+
+            try:
+                with path.open("r", encoding="utf-8", errors="replace") as f:
+                    out.write(f.read())
+            except Exception as e:
+                out.write(f"[ERROR READING FILE: {e}]\n")
+
+    print(f"Project dump written to: {OUTPUT_FILE}")
+
+
+if __name__ == "__main__":
+    main()
+
+
+====================================================================================================
+FILE: scripts/download_models.js
+====================================================================================================
+
+const fs = require('fs');
+const path = require('path');
+
+const ASSETS_DIR = path.join(__dirname, '../src/assets/models');
+
+const FILES = [
+  {
+    name: 'face_embedder.task',
+    urls: [
+      'https://storage.googleapis.com/mediapipe-models/face_embedder/face_embedder/float32/1/face_embedder.task',
+      'https://storage.googleapis.com/mediapipe-models/face_embedder/face_embedder/float16/1/face_embedder.task',
+      'https://storage.googleapis.com/mediapipe-models/face_embedder/mobilenet_v3_large/float32/1/face_embedder.task',
+      'https://storage.googleapis.com/mediapipe-models/face_embedder/mobilenet_v3_small/float32/1/face_embedder.task',
+    ],
+    dir: ASSETS_DIR,
+  },
+  // SigLIP files
+  {
+    name: 'config.json',
+    urls: [
+      'https://huggingface.co/Xenova/siglip-base-patch16-224/resolve/main/config.json',
+    ],
+    dir: path.join(ASSETS_DIR, 'siglip-base-patch16-224'),
+  },
+  {
+    name: 'preprocessor_config.json',
+    urls: [
+      'https://huggingface.co/Xenova/siglip-base-patch16-224/resolve/main/preprocessor_config.json',
+    ],
+    dir: path.join(ASSETS_DIR, 'siglip-base-patch16-224'),
+  },
+  {
+    name: 'tokenizer.json',
+    urls: [
+      'https://huggingface.co/Xenova/siglip-base-patch16-224/resolve/main/tokenizer.json',
+    ],
+    dir: path.join(ASSETS_DIR, 'siglip-base-patch16-224'),
+  },
+  {
+    name: 'tokenizer_config.json',
+    urls: [
+      'https://huggingface.co/Xenova/siglip-base-patch16-224/resolve/main/tokenizer_config.json',
+    ],
+    dir: path.join(ASSETS_DIR, 'siglip-base-patch16-224'),
+  },
+  // We prefer the quantized model as per spec (q8)
+  {
+    name: 'model_quantized.onnx',
+    urls: [
+      'https://huggingface.co/Xenova/siglip-base-patch16-224/resolve/main/onnx/model_quantized.onnx',
+      'https://huggingface.co/Xenova/siglip-base-patch16-224/resolve/main/model_quantized.onnx',
+      'https://huggingface.co/Xenova/siglip-base-patch16-224/resolve/main/onnx/model.onnx', // Fallback to non-quantized if q8 missing (unlikely but safe)
+    ],
+    dir: path.join(ASSETS_DIR, 'siglip-base-patch16-224'),
+  },
+];
+
+async function downloadFile(fileInfo) {
+  if (!fs.existsSync(fileInfo.dir)) {
+    fs.mkdirSync(fileInfo.dir, { recursive: true });
+  }
+
+  const filePath = path.join(fileInfo.dir, fileInfo.name);
+
+  if (fs.existsSync(filePath)) {
+    console.log(`[SKIP] ${fileInfo.name} already exists.`);
+    return;
+  }
+
+  let success = false;
+  for (const url of fileInfo.urls) {
+    console.log(`[DOWNLOADING] ${fileInfo.name} from ${url}...`);
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        await saveStream(response, filePath);
+        console.log(`[SUCCESS] ${fileInfo.name} downloaded.`);
+        success = true;
+        break;
+      } else {
+        console.log(`[WARN] Failed ${url}: ${response.status}`);
+      }
+    } catch (e) {
+      console.log(`[WARN] Error fetching ${url}: ${e.message}`);
+    }
+  }
+
+  if (!success) {
+    console.error(
+      `[ERROR] Failed to download ${fileInfo.name} from any source.`
+    );
+    // process.exit(1); // Don't exit, try next file
+  }
+}
+
+async function saveStream(response, filePath) {
+  const fileStream = fs.createWriteStream(filePath);
+  const stream = require('stream');
+  const { promisify } = require('util');
+  const pipeline = promisify(stream.pipeline);
+  await pipeline(response.body, fileStream);
+}
+
+async function main() {
+  console.log('Starting model downloads...');
+  for (const file of FILES) {
+    await downloadFile(file);
+  }
+  console.log('All downloads complete.');
+}
+
+main();
+
+====================================================================================================
+FILE: spec.md
+====================================================================================================
+
+# spec.md (Technical Specifications)
+
+## 1. Overview
+A Privacy-First Chrome Extension filtering Trump-related content via Network (URL), DOM (Text), and Local AI (Cascade Image Filter).
+
+## 2. Functional Requirements (FR) - Free Tier
+
+**FR-1: Global & Site Toggles**
+* **Storage:** `enabledGlobal: boolean`, `siteDisabled: { [domain]: boolean }`.
+* **Logic:** Global OFF disables all. Site OFF disables content script for that host.
+
+**FR-4: URL Blocking**
+* **Tech:** `chrome.declarativeNetRequest`.
+* **Rule:** Block `main_frame` if URL contains keyword.
+
+**FR-5: DOM Filtering**
+* **Selectors:** `article`, `.card`, `.teaser`, `.story`, `.sidebar`.
+* **Action:** `style.display = 'none'`, `data-trump-filter-hidden="true"`.
+
+**FR-6: Infinite Scroll**
+* **Tech:** `MutationObserver` on `document.body`.
+* **Constraint:** Debounce 500ms. Max 1 scan per burst.
+
+## 3. Premium Features (PF) - Paid Tier
+
+**PF-1: The Cascade Architecture (Offscreen)**
+* **Infrastructure:**
+    * **Host:** `offscreen.html` (Manifest V3 Offscreen Document).
+    * **Reason:** `DOM_SCRAPING` (valid reason for ML inference).
+* **Layer A: Face Identity (Fast)**
+    * **Tech:** MediaPipe Tasks (`FaceEmbedder` w/ Wasm).
+    * **Model:** `face_embedder.task` (Bundled, ~5MB).
+    * **Logic:**
+        1.  Detect faces in image bitmap.
+        2.  Generate 128-d embedding.
+        3.  Cosine Similarity vs. `trump_vectors.json` (Pre-calculated).
+        4.  Threshold: `> 0.6`.
+* **Layer B: Concept Context (Smart - Optional)**
+    * **Trigger:** Only if "Strict Mode" is ON and Layer A finds no face but context is suspicious.
+    * **Tech:** Transformers.js v3 (WebGPU).
+    * **Model:** `Xenova/siglip-base-patch16-224` (Quantized q8, ~180MB).
+    * **Logic:** Zero-shot classify: `["Donald Trump", "MAGA Rally", "Politics"]`.
+* **Messaging:**
+    * Content Script sends `base64` or `blob` -> Background -> Offscreen.
+    * Offscreen returns `{ isBlocked: boolean, confidence: number }`.
+
+**PF-2: Privacy & Consent**
+* **Default:** Features OFF.
+* **Action:** User must click "Enable AI Filtering" and accept "Local Compute Only" disclaimer.
+* **Data:** NO images leave the browser. NO analytics on specific images.
+
+## 4. Non-Functional Requirements (NFR)
+* **NFR-1 (Performance):**
+    * Face Check: < 50ms (MediaPipe Wasm).
+    * SigLIP Check: < 500ms (WebGPU).
+* **NFR-2 (Bundling):**
+    * All model assets must be in `assets/models/`.
+    * `manifest.json` CSP must allow `wasm-unsafe-eval`.
+* **NFR-3 (Battery):**
+    * Offscreen document must close after 30s of inactivity to save RAM.
+
+## 6. Data Model
+```json
+{
+  "version": 2,
+  "settings": {
+    "enabledGlobal": true,
+    "sensitivity": "balanced", // light, balanced, strict (enables SigLIP)
+    "aiMode": "none", // none, face_only, cascade
+    "aiConsent": false
+  },
+  "lists": {
+    "whitelist": ["example.com"],
+    "userKeywords": []
+  }
+}
+
+====================================================================================================
+FILE: src/background.js
+====================================================================================================
+
+import { updateRules, sendMessageToOffscreen } from './lib/backgroundLogic';
+
+console.log('Trump Filter Background Service Started');
+
+// Initialize on install/update
+chrome.runtime.onInstalled.addListener(async () => {
+  console.log('Extension installed/updated. Initializing...');
+  await updateRules();
+
+  // Test offscreen bridge
+  try {
+    const response = await sendMessageToOffscreen('PING');
+    console.log('Offscreen Bridge Test:', response);
+  } catch (e) {
+    console.error('Offscreen Bridge Test Failed:', e);
+  }
+});
+
+// Listen for storage changes
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.lists) {
+    console.log('Lists changed. Updating rules...');
+    updateRules();
+  }
+});
+
+// Listen for messages (from Content Script, Popup, or Options)
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.target === 'background') {
+    handleBackgroundMessage(message, sender).then(sendResponse);
+    return true;
+  }
+});
+
+async function handleBackgroundMessage(message, sender) {
+  switch (message.type) {
+    case 'CHECK_IMAGE':
+      try {
+        // Fetch image and convert to base64
+        const response = await fetch(message.data.url);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        const base64Promise = new Promise((resolve) => {
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+        const base64Data = await base64Promise;
+
+        // Forward to offscreen
+        return await sendMessageToOffscreen('SCAN_IMAGE', {
+          type: 'base64',
+          data: base64Data,
+          strictMode: message.data.strictMode
+        });
+      } catch (error) {
+        console.error('Error fetching image for check:', error);
+        return { success: false, error: error.message };
+      }
+    default:
+      return { success: false, error: 'Unknown background message type' };
+  }
+}
+
+====================================================================================================
+FILE: src/content.js
+====================================================================================================
+
+import { getStorage } from './lib/storage';
+import { scanAndFilter } from './lib/dom';
+
+let keywords = [];
+let enabled = false;
+
+async function init() {
+  const data = await getStorage();
+
+  // Check if disabled for this site
+  const domain = window.location.hostname;
+  if (
+    data.settings.enabledGlobal === false ||
+    data.lists.whitelist.includes(domain)
+  ) {
+    console.log('Trump Filter: Disabled for this site/globally');
+    return;
+  }
+
+  keywords = data.lists.userKeywords;
+  enabled = true;
+
+  if (keywords.length > 0) {
+    // Initial scan
+    scanAndFilter(keywords, data.settings);
+
+    // Observe for dynamic content
+    const observer = new MutationObserver(
+      debounce(() => {
+        scanAndFilter(keywords, data.settings);
+      }, 500)
+    );
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  }
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+init();
+
+====================================================================================================
+FILE: src/lib/backgroundLogic.js
+====================================================================================================
+
+import { getStorage } from './storage';
+import { generateRules } from './rules';
+
+const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
+
+export async function updateRules() {
+  try {
+    const data = await getStorage();
+    const newRules = generateRules(data.lists);
+
+    const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
+    const removeRuleIds = existingRules.map((rule) => rule.id);
+
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds,
+      addRules: newRules,
+    });
+
+    console.log(`Rules updated. Active rules: ${newRules.length}`);
+    return newRules.length;
+  } catch (error) {
+    console.error('Failed to update rules:', error);
+    throw error;
+  }
+}
+
+/**
+ * Ensures an offscreen document exists.
+ */
+export async function setupOffscreen() {
+  // Check if it already exists
+  const existingContexts = await chrome.runtime.getContexts({
+    contextTypes: ['OFFSCREEN_DOCUMENT'],
+  });
+
+  if (existingContexts.length > 0) {
+    return;
+  }
+
+  // Create it
+  await chrome.offscreen.createDocument({
+    url: OFFSCREEN_DOCUMENT_PATH,
+    reasons: ['DOM_SCRAPING'], // Required reason for ML/DOM processing
+    justification: 'Running local ML models for image content analysis.',
+  });
+
+  console.log('Offscreen document created');
+}
+
+/**
+ * Sends a message to the offscreen document.
+ */
+export async function sendMessageToOffscreen(type, data = {}) {
+  await setupOffscreen();
+  return chrome.runtime.sendMessage({
+    target: 'offscreen',
+    type,
+    data,
+  });
+}
+
+====================================================================================================
+FILE: src/lib/dom.js
+====================================================================================================
+
+/**
+ * DOM Filtering Logic
+ */
+
+export const DEFAULT_SELECTORS = [
+  'article',
+  '.card',
+  '.teaser',
+  '.story',
+  '.sidebar',
+  '.post',
+  '.content-item',
+  'div[role="article"]',
+];
+
+/**
+ * Checks if an element or its children contains any of the keywords.
+ * @param {Element} element
+ * @param {string[]} keywords
+ * @returns {boolean}
+ */
+export function containsKeywords(element, keywords) {
+  if (!keywords || keywords.length === 0) return false;
+
+  const text = element.innerText || element.textContent || '';
+  const lowerText = text.toLowerCase();
+
+  return keywords.some((keyword) => {
+    if (!keyword) return false;
+    const lowerKeyword = keyword.toLowerCase();
+    return lowerText.includes(lowerKeyword);
+  });
+}
+
+/**
+ * Extracts context text from an image element (alt, title, surrounding text).
+ * @param {HTMLImageElement} img
+ * @returns {string}
+ */
+export function getImageContext(img) {
+  let context = (img.alt || '') + ' ' + (img.title || '');
+
+  // Look at parent link text or nearest caption
+  const parentLink = img.closest('a');
+  if (parentLink) {
+    context += ' ' + (parentLink.innerText || parentLink.textContent || '');
+  }
+
+  const figure = img.closest('figure');
+  if (figure) {
+    const figcaption = figure.querySelector('figcaption');
+    if (figcaption) {
+      context += ' ' + (figcaption.innerText || figcaption.textContent || '');
+    }
+  }
+
+  return context.trim();
+}
+
+/**
+ * Scans the DOM for elements matching selectors and hides them if keywords match.
+ * @param {string[]} keywords
+ * @param {Object} settings
+ * @param {string[]} customSelectors
+ */
+export async function scanAndFilter(keywords, settings = {}, customSelectors = []) {
+  if (!keywords || keywords.length === 0) return;
+
+  // 1. Filter Container Elements (Layer 1)
+  const selectors = [...DEFAULT_SELECTORS, ...customSelectors];
+  const elements = document.querySelectorAll(selectors.join(', '));
+
+  elements.forEach((el) => {
+    if (el.dataset.trumpFilterHidden === 'true') return;
+
+    if (containsKeywords(el, keywords)) {
+      hideElement(el, 'Container matched keywords');
+    }
+  });
+
+  // 2. Filter Images (Layer 3 - Contextual)
+  const images = document.querySelectorAll(
+    'img:not([data-trump-filter-hidden="true"])'
+  );
+  
+  const imagesToScanAI = [];
+
+  images.forEach((img) => {
+    // Check if parent container is already hidden by us
+    if (img.closest('[data-trump-filter-hidden="true"]')) return;
+
+    const context = getImageContext(img);
+    if (keywords.some((k) => context.toLowerCase().includes(k.toLowerCase()))) {
+      hideElement(img, 'Image context matched keywords');
+    } else if (
+      settings.aiMode && 
+      settings.aiMode !== 'none' && 
+      settings.aiConsent && 
+      !img.dataset.trumpFilterScanning
+    ) {
+      // Mark for AI Scanning (Layer 2)
+      imagesToScanAI.push(img);
+    }
+  });
+
+  if (imagesToScanAI.length > 0) {
+    scanImagesAI(imagesToScanAI, settings);
+  }
+}
+
+/**
+ * Sends images to the background for AI analysis
+ */
+async function scanImagesAI(images, settings) {
+  images.forEach(async (img) => {
+    // Skip if already scanning or small images
+    if (img.dataset.trumpFilterScanning || img.width < 50 || img.height < 50) return;
+    
+    // Check if src is valid
+    if (!img.src || img.src.startsWith('data:')) return; 
+
+    img.dataset.trumpFilterScanning = 'true';
+
+    try {
+      // We send the URL to background, background fetches it and sends to offscreen
+      // Or we can convert to base64 here if it's CORS safe, but URL is easier if background can fetch.
+      // Actually, offscreen can fetch too. 
+      // But passing base64 is safer for CORS if we fetch in content script (which might fail too).
+      // Let's try sending URL first.
+      
+      const response = await chrome.runtime.sendMessage({
+        target: 'background',
+        type: 'CHECK_IMAGE',
+        data: {
+          url: img.src,
+          strictMode: settings.sensitivity === 'strict'
+        }
+      });
+
+      if (response && response.success && response.isBlocked) {
+        hideElement(img, `AI detected ${response.layer} (confidence: ${response.confidence})`);
+      }
+    } catch (error) {
+      console.error('Error scanning image with AI:', error);
+    } finally {
+      delete img.dataset.trumpFilterScanning;
+    }
+  });
+}
+
+function hideElement(el, reason) {
+  if (el.tagName === 'IMG') {
+    const placeholder = createPlaceholder(el);
+    el.parentNode.insertBefore(placeholder, el);
+    el.style.display = 'none';
+  } else {
+    el.style.display = 'none';
+  }
+  el.dataset.trumpFilterHidden = 'true';
+  console.log(`Trump Filter: Hidden an element (${reason}).`);
+}
+
+function createPlaceholder(img) {
+  const placeholder = document.createElement('div');
+  placeholder.className = 'trump-filter-placeholder';
+
+  // Copy relevant styles for layout preservation
+  const styles = window.getComputedStyle(img);
+  placeholder.style.width =
+    styles.width !== '0px'
+      ? styles.width
+      : img.width
+        ? img.width + 'px'
+        : '100%';
+  placeholder.style.height =
+    styles.height !== '0px'
+      ? styles.height
+      : img.height
+        ? img.height + 'px'
+        : '150px';
+  placeholder.style.display =
+    styles.display === 'inline' ? 'inline-block' : styles.display;
+
+  placeholder.style.backgroundColor = '#f0f0f0';
+  placeholder.style.border = '1px solid #ccc';
+  placeholder.style.color = '#666';
+  placeholder.style.display = 'flex';
+  placeholder.style.alignItems = 'center';
+  placeholder.style.justifyContent = 'center';
+  placeholder.style.fontSize = '12px';
+  placeholder.style.fontFamily = 'sans-serif';
+  placeholder.style.textAlign = 'center';
+  placeholder.textContent = 'Content Filtered';
+
+  return placeholder;
+}
+
+====================================================================================================
+FILE: src/lib/rules.js
+====================================================================================================
+
+/**
+ * Generates declarativeNetRequest rules from settings and lists.
+ * @param {Object} lists - The lists object from storage { whitelist: [], userKeywords: [] }
+ * @returns {Array} - Array of chrome.declarativeNetRequest.Rule objects
+ */
+export function generateRules(lists) {
+  const rules = [];
+  let idCounter = 1;
+
+  // 1. Whitelist Rules (Priority 100)
+  // Action: allow
+  // These allow navigation TO the whitelisted domain
+  if (lists.whitelist && Array.isArray(lists.whitelist)) {
+    lists.whitelist.forEach((domain) => {
+      if (!domain) return;
+      rules.push({
+        id: idCounter++,
+        priority: 100,
+        action: { type: 'allow' },
+        condition: {
+          urlFilter: `||${domain}^`,
+          resourceTypes: ['main_frame'],
+        },
+      });
+    });
+  }
+
+  // 2. Keyword Block Rules (Priority 10)
+  // Action: block
+  // Blocks navigation if URL contains keyword
+  if (lists.userKeywords && Array.isArray(lists.userKeywords)) {
+    lists.userKeywords.forEach((keyword) => {
+      if (!keyword) return;
+      rules.push({
+        id: idCounter++,
+        priority: 10,
+        action: { type: 'block' },
+        condition: {
+          urlFilter: `*${keyword}*`,
+          resourceTypes: ['main_frame'],
+          isUrlFilterCaseSensitive: false,
+        },
+      });
+    });
+  }
+
+  return rules;
+}
+
+====================================================================================================
+FILE: src/lib/storage.js
+====================================================================================================
+
+const DEFAULT_SETTINGS = {
+  version: 2,
+  settings: {
+    enabledGlobal: true,
+    sensitivity: 'balanced',
+    aiMode: 'none',
+    aiConsent: false,
+  },
+  lists: {
+    whitelist: ['example.com'],
+    userKeywords: ['trump'],
+  },
+};
+
+export async function getStorage() {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(null, (result) => {
+        // Simple merge - in production use deep merge
+        resolve({
+          ...DEFAULT_SETTINGS,
+          ...result,
+          settings: {
+            ...DEFAULT_SETTINGS.settings,
+            ...(result.settings || {}),
+          },
+          lists: { ...DEFAULT_SETTINGS.lists, ...(result.lists || {}) },
+        });
+      });
+    });
+  }
+  return DEFAULT_SETTINGS;
+}
+
+export async function setStorage(data) {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    return new Promise((resolve) => {
+      chrome.storage.local.set(data, () => {
+        resolve();
+      });
+    });
+  }
+  // Mock behavior for non-extension env if needed, or just no-op
+}
+
+export const defaults = DEFAULT_SETTINGS;
+
+====================================================================================================
+FILE: src/offscreen/offscreen.html
+====================================================================================================
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Offscreen</title>
+</head>
+<body>
+  <div id="status">Offscreen Ready</div>
+  <script src="offscreen.js"></script>
+</body>
+</html>
+
+====================================================================================================
+FILE: src/offscreen/offscreen.js
+====================================================================================================
+
+/**
+ * Offscreen Document - The GPU Worker
+ * Handles heavy ML inference (MediaPipe, Transformers.js)
+ */
+import { FilesetResolver, ImageEmbedder } from '@mediapipe/tasks-vision';
+import { pipeline, env } from '@huggingface/transformers';
+
+console.log('Offscreen document loaded');
+
+// Configure transformers.js to use local models
+env.allowRemoteModels = false;
+env.localModelPath = chrome.runtime.getURL('assets/models/');
+
+let faceEmbedder = null;
+let referenceVectors = [];
+let classifier = null;
+
+async function initializeModel() {
+  try {
+    console.log('Initializing MediaPipe FaceEmbedder...');
+    const vision = await FilesetResolver.forVisionTasks(
+      chrome.runtime.getURL('assets/wasm')
+    );
+    
+    faceEmbedder = await ImageEmbedder.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: chrome.runtime.getURL('assets/models/face_embedder.task'),
+      },
+      runningMode: 'IMAGE'
+    });
+    
+    console.log('Loading reference vectors...');
+    const response = await fetch(chrome.runtime.getURL('assets/models/trump_vectors.json'));
+    referenceVectors = await response.json();
+
+    console.log('Initializing SigLIP classifier...');
+    classifier = await pipeline('zero-shot-image-classification', 'siglip-base-patch16-224', {
+      device: 'webgpu',
+    });
+    
+    console.log('MediaPipe FaceEmbedder and SigLIP initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize models:', error);
+  }
+}
+
+/**
+ * Calculates cosine similarity between two vectors
+ */
+function cosineSimilarity(vecA, vecB) {
+  if (vecA.length !== vecB.length) return 0;
+  let dotProduct = 0;
+  let mA = 0;
+  let mB = 0;
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    mA += vecA[i] * vecA[i];
+    mB += vecB[i] * vecB[i];
+  }
+  mA = Math.sqrt(mA);
+  mB = Math.sqrt(mB);
+  if (mA * mB === 0) return 0;
+  return dotProduct / (mA * mB);
+}
+
+/**
+ * Checks if any face in the image matches the Trump reference vectors
+ */
+async function isTrumpFace(imageBitmap) {
+  if (!faceEmbedder || referenceVectors.length === 0) return { isBlocked: false, confidence: 0 };
+
+  try {
+    const result = faceEmbedder.embed(imageBitmap);
+    // ImageEmbedder returns ImageEmbedderResult which has embeddings array
+    // Each embedding has floatEmbedding or quantizedEmbedding
+    
+    if (!result.embeddings || result.embeddings.length === 0) {
+      return { isBlocked: false, confidence: 0 };
+    }
+
+    let maxSimilarity = 0;
+
+    for (const embedding of result.embeddings) {
+      const vector = embedding.floatEmbedding;
+      if (!vector) continue;
+
+      for (const ref of referenceVectors) {
+        const similarity = cosineSimilarity(vector, ref.vector);
+        if (similarity > maxSimilarity) {
+          maxSimilarity = similarity;
+        }
+      }
+    }
+
+    // Threshold from spec.md: > 0.6
+    const threshold = 0.6;
+    return {
+      isBlocked: maxSimilarity > threshold,
+      confidence: maxSimilarity
+    };
+  } catch (error) {
+    console.error('Error in isTrumpFace:', error);
+    return { isBlocked: false, confidence: 0, error: error.message };
+  }
+}
+
+/**
+ * Scans image for concepts using SigLIP
+ */
+async function scanContext(imageBitmap) {
+  if (!classifier) return { isBlocked: false, confidence: 0 };
+
+  try {
+    // SigLIP can take ImageBitmap directly in Transformers.js v3
+    const labels = ['Donald Trump', 'MAGA Rally', 'Politics'];
+    const result = await classifier(imageBitmap, labels);
+    
+    // Result is an array of { label: string, score: number }
+    // We check if any of the target labels have a high score
+    const trumpScore = result.find(r => r.label === 'Donald Trump')?.score || 0;
+    const magaScore = result.find(r => r.label === 'MAGA Rally')?.score || 0;
+    
+    const maxScore = Math.max(trumpScore, magaScore);
+    const threshold = 0.5; // Adjusted for SigLIP confidence
+
+    return {
+      isBlocked: maxScore > threshold,
+      confidence: maxScore,
+      labels: result
+    };
+  } catch (error) {
+    console.error('Error in scanContext:', error);
+    return { isBlocked: false, confidence: 0, error: error.message };
+  }
+}
+
+// Initialize immediately
+initializeModel();
+
+// Listen for messages from the background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.target !== 'offscreen') {
+    return false;
+  }
+
+  handleMessage(message).then(sendResponse);
+  return true; // Keep message channel open for async response
+});
+
+async function handleMessage(message) {
+  // console.log('Offscreen received message:', message.type);
+
+  switch (message.type) {
+    case 'PING':
+      return { success: true, data: 'PONG' };
+
+    case 'SCAN_IMAGE':
+      if (!faceEmbedder) {
+        return { success: false, error: 'Model not initialized' };
+      }
+      
+      try {
+        let imageBitmap;
+        if (message.data.type === 'blob') {
+          // data.data is a Blob or ArrayBuffer
+          const blob = new Blob([message.data.data], { type: message.data.mimeType });
+          imageBitmap = await createImageBitmap(blob);
+        } else if (message.data.type === 'base64') {
+          const res = await fetch(message.data.data);
+          const blob = await res.blob();
+          imageBitmap = await createImageBitmap(blob);
+        } else {
+          return { success: false, error: 'Unsupported payload type' };
+        }
+
+        const faceResult = await isTrumpFace(imageBitmap);
+        if (faceResult.isBlocked) {
+          return { success: true, ...faceResult, layer: 'face' };
+        }
+
+        // Layer B: Concept (only if strictMode is requested and face didn't match)
+        if (message.data.strictMode) {
+          const conceptResult = await scanContext(imageBitmap);
+          return { success: true, ...conceptResult, layer: 'concept' };
+        }
+
+        return { success: true, ...faceResult, layer: 'face' };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+
+    default:
+      return { success: false, error: 'Unknown message type' };
+  }
+}
+====================================================================================================
+FILE: src/options/options.html
+====================================================================================================
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Trump Filter Options</title>
+  <style>
+    body {
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 24px;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+    .card {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    h1 { margin-top: 0; color: #1a73e8; }
+    h2 { font-size: 18px; margin-top: 0; }
+    .section-desc { font-size: 14px; color: #666; margin-bottom: 16px; }
+    
+    .setting-row { margin-bottom: 20px; }
+    label { display: block; font-weight: 500; margin-bottom: 8px; }
+    
+    select, textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    textarea { height: 100px; resize: vertical; }
+
+    .btn-save {
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .btn-save:hover { background-color: #1765cc; }
+    
+    .status-msg {
+      margin-top: 10px;
+      font-size: 14px;
+      color: green;
+      display: none;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin-left: 8px;
+    }
+    .badge-premium { background: #ffd700; color: #554400; }
+  </style>
+</head>
+<body>
+  <h1>Trump Filter Settings</h1>
+
+  <div class="card">
+    <h2>Sensitivity</h2>
+    <p class="section-desc">Adjust how aggressively the filter scans for content.</p>
+    <div class="setting-row">
+      <select id="sensitivity">
+        <option value="light">Light (URL & Main Headers)</option>
+        <option value="balanced">Balanced (Most content)</option>
+        <option value="strict">Strict (Aggressive DOM scanning)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Custom Keywords</h2>
+    <p class="section-desc">Enter words to block (one per line).</p>
+    <div class="setting-row">
+      <textarea id="userKeywords" placeholder="trump&#10;maga&#10;donald"></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Whitelist</h2>
+    <p class="section-desc">Domains where the filter is always disabled.</p>
+    <div class="setting-row">
+      <textarea id="whitelist" placeholder="example.com&#10;myfavoriteblog.org"></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>AI Filtering <span class="badge badge-premium">Premium</span></h2>
+    <p class="section-desc">Enable Face Detection and Concept analysis (Requires Premium Version).</p>
+    <div class="setting-row">
+      <label>
+        <input type="checkbox" id="aiEnabled" disabled>
+        Enable Local AI Cascade
+      </label>
+    </div>
+  </div>
+
+  <div style="text-align: right;">
+    <span id="status" class="status-msg">Settings saved!</span>
+    <button id="saveBtn" class="btn-save">Save Settings</button>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
+====================================================================================================
+FILE: src/options/options.js
+====================================================================================================
+
+import { getStorage, setStorage } from '../lib/storage';
+
+const sensitivity = document.getElementById('sensitivity');
+const userKeywords = document.getElementById('userKeywords');
+const whitelist = document.getElementById('whitelist');
+const saveBtn = document.getElementById('saveBtn');
+const status = document.getElementById('status');
+
+async function loadSettings() {
+  const data = await getStorage();
+
+  sensitivity.value = data.settings.sensitivity;
+  userKeywords.value = data.lists.userKeywords.join('\n');
+  whitelist.value = data.lists.whitelist.join('\n');
+}
+
+async function saveSettings() {
+  const data = await getStorage();
+
+  data.settings.sensitivity = sensitivity.value;
+  data.lists.userKeywords = userKeywords.value
+    .split('\n')
+    .map((k) => k.trim())
+    .filter((k) => k !== '');
+
+  data.lists.whitelist = whitelist.value
+    .split('\n')
+    .map((d) => d.trim())
+    .filter((d) => d !== '');
+
+  await setStorage(data);
+
+  // Show status
+  status.style.display = 'inline';
+  setTimeout(() => {
+    status.style.display = 'none';
+  }, 2000);
+}
+
+document.addEventListener('DOMContentLoaded', loadSettings);
+saveBtn.addEventListener('click', saveSettings);
+
+====================================================================================================
+FILE: src/popup/popup.html
+====================================================================================================
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Trump Filter</title>
+  <style>
+    body {
+      width: 280px;
+      padding: 16px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      color: #333;
+    }
+    h2 {
+      font-size: 18px;
+      margin-top: 0;
+      color: #1a73e8;
+    }
+    .toggle-group {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    /* Simple Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 20px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #1a73e8;
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+    .stats {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+      font-size: 13px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      color: #666;
+    }
+    .stat-val {
+      font-weight: bold;
+      color: #333;
+    }
+    .footer {
+      margin-top: 16px;
+      text-align: center;
+    }
+    .btn {
+      background: none;
+      border: 1px solid #1a73e8;
+      color: #1a73e8;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .btn:hover {
+      background-color: #f1f8ff;
+    }
+  </style>
+</head>
+<body>
+  <h2>Trump Filter</h2>
+  
+  <div class="toggle-group">
+    <span class="label">Filter Globally</span>
+    <label class="switch">
+      <input type="checkbox" id="globalToggle">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="toggle-group">
+    <span class="label">Enable on this site</span>
+    <label class="switch">
+      <input type="checkbox" id="siteToggle">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="toggle-group">
+    <span class="label">AI Image Filtering</span>
+    <label class="switch">
+      <input type="checkbox" id="aiToggle">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="stats">
+    <div class="stat-row">
+      <span>Items Blocked:</span>
+      <span class="stat-val" id="statsCount">0</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    <button id="openOptions" class="btn">Advanced Settings</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+====================================================================================================
+FILE: src/popup/popup.js
+====================================================================================================
+
+import { getStorage, setStorage } from '../lib/storage';
+
+const globalToggle = document.getElementById('globalToggle');
+const siteToggle = document.getElementById('siteToggle');
+const aiToggle = document.getElementById('aiToggle');
+const statsCount = document.getElementById('statsCount');
+const openOptions = document.getElementById('openOptions');
+
+async function init() {
+  const data = await getStorage();
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const url = new URL(tab.url);
+  const domain = url.hostname;
+
+  // Initialize UI
+  globalToggle.checked = data.settings.enabledGlobal;
+  aiToggle.checked = data.settings.aiMode !== 'none';
+
+  // Site toggle is "Enabled on this site"
+  // If whitelisted, it's NOT enabled
+  siteToggle.checked = !data.lists.whitelist.includes(domain);
+
+  // Stats (placeholder for now)
+  statsCount.textContent = '0';
+
+  // Listeners
+  globalToggle.addEventListener('change', async () => {
+    data.settings.enabledGlobal = globalToggle.checked;
+    await setStorage(data);
+  });
+
+  aiToggle.addEventListener('change', async () => {
+    if (aiToggle.checked && !data.settings.aiConsent) {
+      const consent = confirm(
+        "Privacy Notice: Enabling AI Filtering will process images locally on your device. " +
+        "No image data leaves your browser. This may impact battery life and performance. " +
+        "Do you consent to local AI processing?"
+      );
+      
+      if (consent) {
+        data.settings.aiConsent = true;
+        data.settings.aiMode = 'cascade';
+      } else {
+        aiToggle.checked = false;
+        return;
+      }
+    } else if (aiToggle.checked) {
+      data.settings.aiMode = 'cascade';
+    } else {
+      data.settings.aiMode = 'none';
+    }
+    await setStorage(data);
+  });
+
+  siteToggle.addEventListener('change', async () => {
+    const isEnabled = siteToggle.checked;
+    if (isEnabled) {
+      // Remove from whitelist
+      data.lists.whitelist = data.lists.whitelist.filter((d) => d !== domain);
+    } else {
+      // Add to whitelist
+      if (!data.lists.whitelist.includes(domain)) {
+        data.lists.whitelist.push(domain);
+      }
+    }
+    await setStorage(data);
+  });
+
+  openOptions.addEventListener('click', () => {
+    chrome.runtime.openOptionsPage();
+  });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+====================================================================================================
+FILE: tests/backgroundLogic.test.js
+====================================================================================================
+
+import { updateRules, setupOffscreen } from '../src/lib/backgroundLogic';
+import * as storage from '../src/lib/storage';
+import * as rules from '../src/lib/rules';
+
+// Mock dependencies
+jest.mock('../src/lib/storage');
+jest.mock('../src/lib/rules');
+
+describe('Background Logic', () => {
+  const originalChrome = global.chrome;
+  const mockUpdateDynamicRules = jest.fn();
+  const mockGetDynamicRules = jest.fn();
+  const mockCreateDocument = jest.fn();
+  const mockGetContexts = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.chrome = {
+      declarativeNetRequest: {
+        getDynamicRules: mockGetDynamicRules,
+        updateDynamicRules: mockUpdateDynamicRules,
+      },
+      offscreen: {
+        createDocument: mockCreateDocument,
+      },
+      runtime: {
+        getContexts: mockGetContexts,
+      },
+    };
+
+    // Default mocks
+    storage.getStorage.mockResolvedValue({
+      lists: { whitelist: [], userKeywords: [] },
+    });
+    rules.generateRules.mockReturnValue([]);
+    mockGetDynamicRules.mockResolvedValue([]);
+    mockUpdateDynamicRules.mockResolvedValue();
+    mockCreateDocument.mockResolvedValue();
+    mockGetContexts.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    global.chrome = originalChrome;
+  });
+
+  test('updateRules fetches storage, generates rules, and updates DNR', async () => {
+    const mockLists = { whitelist: ['test.com'], userKeywords: ['word'] };
+    const mockRules = [{ id: 1, action: { type: 'block' } }];
+    const existingRules = [{ id: 999 }];
+
+    storage.getStorage.mockResolvedValue({ lists: mockLists });
+    rules.generateRules.mockReturnValue(mockRules);
+    mockGetDynamicRules.mockResolvedValue(existingRules);
+
+    await updateRules();
+
+    expect(storage.getStorage).toHaveBeenCalled();
+    expect(rules.generateRules).toHaveBeenCalledWith(mockLists);
+    expect(mockGetDynamicRules).toHaveBeenCalled();
+    expect(mockUpdateDynamicRules).toHaveBeenCalledWith({
+      removeRuleIds: [999],
+      addRules: mockRules,
+    });
+  });
+
+  test('handles errors gracefully', async () => {
+    storage.getStorage.mockRejectedValue(new Error('Storage failure'));
+    const consoleSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+
+    await expect(updateRules()).rejects.toThrow('Storage failure');
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Failed to update rules:',
+      expect.any(Error)
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  describe('Offscreen Management', () => {
+    test('setupOffscreen creates document if none exists', async () => {
+      mockGetContexts.mockResolvedValue([]);
+      await setupOffscreen();
+      expect(mockGetContexts).toHaveBeenCalledWith({
+        contextTypes: ['OFFSCREEN_DOCUMENT'],
+      });
+      expect(mockCreateDocument).toHaveBeenCalled();
+    });
+
+    test('setupOffscreen does not create document if one already exists', async () => {
+      mockGetContexts.mockResolvedValue([
+        { contextType: 'OFFSCREEN_DOCUMENT' },
+      ]);
+      await setupOffscreen();
+      expect(mockCreateDocument).not.toHaveBeenCalled();
+    });
+  });
+});
+
+====================================================================================================
+FILE: tests/dom.test.js
+====================================================================================================
+
+/**
+ * @jest-environment jsdom
+ */
+import { containsKeywords, scanAndFilter } from '../src/lib/dom';
+
+describe('DOM Filtering', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  test('containsKeywords detects keywords in element text', () => {
+    const div = document.createElement('div');
+    div.innerText = 'This is a story about Donald Trump.';
+    expect(containsKeywords(div, ['trump'])).toBe(true);
+    expect(containsKeywords(div, ['biden'])).toBe(false);
+  });
+
+  test('scanAndFilter hides matching elements', () => {
+    document.body.innerHTML = `
+      <article id="match">Trump wins something</article>
+      <div class="card" id="no-match">Sky is blue</div>
+      <div class="teaser" id="match-2">Breaking news: Trump rally</div>
+    `;
+
+    scanAndFilter(['trump']);
+
+    expect(document.getElementById('match').style.display).toBe('none');
+    expect(document.getElementById('match').dataset.trumpFilterHidden).toBe(
+      'true'
+    );
+    expect(document.getElementById('no-match').style.display).not.toBe('none');
+    expect(document.getElementById('match-2').style.display).toBe('none');
+  });
+
+  test('scanAndFilter ignores already hidden elements', () => {
+    document.body.innerHTML = '<article id="item">Trump</article>';
+    const el = document.getElementById('item');
+    el.dataset.trumpFilterHidden = 'true';
+    el.style.display = 'block';
+
+    scanAndFilter(['trump']);
+
+    // Should still be block because it was skipped
+    expect(el.style.display).toBe('block');
+  });
+
+  test('scanAndFilter hides images based on alt text', () => {
+    document.body.innerHTML = `
+      <img id="bad-img" alt="Donald Trump in Florida" src="trump.jpg">
+      <img id="good-img" alt="A cute cat" src="cat.jpg">
+    `;
+
+    scanAndFilter(['trump']);
+
+    expect(document.getElementById('bad-img').style.display).toBe('none');
+    expect(document.getElementById('good-img').style.display).not.toBe('none');
+  });
+
+  test('scanAndFilter hides images based on parent link text', () => {
+    // We use a container that is NOT in DEFAULT_SELECTORS to ensure the image itself is what gets hidden
+    document.body.innerHTML = `
+      <section id="non-matching-container">
+        <a href="/news" id="bad-link">
+          <img id="context-img" src="photo.jpg">
+          <span>Latest Trump News</span>
+        </a>
+      </section>
+    `;
+
+    scanAndFilter(['trump']);
+
+    expect(document.getElementById('context-img').style.display).toBe('none');
+  });
+
+  test('scanAndFilter creates a placeholder for hidden images', () => {
+    document.body.innerHTML =
+      '<img id="img" alt="Trump" src="t.jpg" width="200" height="100">';
+
+    scanAndFilter(['trump']);
+
+    const placeholder = document.querySelector('.trump-filter-placeholder');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder.textContent).toBe('Content Filtered');
+  });
+});
+
+====================================================================================================
+FILE: tests/rules.test.js
+====================================================================================================
+
+import { generateRules } from '../src/lib/rules';
+
+describe('Rule Generator', () => {
+  test('returns empty array for empty input', () => {
+    const rules = generateRules({ whitelist: [], userKeywords: [] });
+    expect(rules).toEqual([]);
+  });
+
+  test('generates allow rules for whitelist', () => {
+    const rules = generateRules({
+      whitelist: ['example.com'],
+      userKeywords: [],
+    });
+    expect(rules).toHaveLength(1);
+    expect(rules[0]).toMatchObject({
+      priority: 100,
+      action: { type: 'allow' },
+      condition: {
+        urlFilter: '||example.com^',
+        resourceTypes: ['main_frame'],
+      },
+    });
+  });
+
+  test('generates block rules for keywords', () => {
+    const rules = generateRules({ whitelist: [], userKeywords: ['trump'] });
+    expect(rules).toHaveLength(1);
+    expect(rules[0]).toMatchObject({
+      priority: 10,
+      action: { type: 'block' },
+      condition: {
+        urlFilter: '*trump*',
+        resourceTypes: ['main_frame'],
+        isUrlFilterCaseSensitive: false,
+      },
+    });
+  });
+
+  test('handles mixed lists with correct ids', () => {
+    const lists = {
+      whitelist: ['good.com'],
+      userKeywords: ['bad'],
+    };
+    const rules = generateRules(lists);
+    expect(rules).toHaveLength(2);
+
+    // Allow rule first (by implementation order)
+    expect(rules[0].action.type).toBe('allow');
+    expect(rules[0].id).toBe(1);
+
+    // Block rule second
+    expect(rules[1].action.type).toBe('block');
+    expect(rules[1].id).toBe(2);
+  });
+});
+
+====================================================================================================
+FILE: tests/setup.test.js
+====================================================================================================
+
+describe('Setup', () => {
+  test('true is true', () => {
+    expect(true).toBe(true);
+  });
+});
+
+====================================================================================================
+FILE: tests/storage.test.js
+====================================================================================================
+
+import { getStorage, setStorage, defaults } from '../src/lib/storage';
+
+describe('Storage', () => {
+  const originalChrome = global.chrome;
+
+  beforeEach(() => {
+    global.chrome = {
+      storage: {
+        local: {
+          get: jest.fn((key, cb) => cb({})),
+          set: jest.fn((data, cb) => cb()),
+        },
+      },
+    };
+  });
+
+  afterEach(() => {
+    global.chrome = originalChrome;
+  });
+
+  test('returns defaults when empty', async () => {
+    const data = await getStorage();
+    expect(data).toEqual(defaults);
+  });
+
+  test('merges stored data with defaults', async () => {
+    const stored = {
+      settings: { enabledGlobal: false },
+    };
+    global.chrome.storage.local.get.mockImplementation((key, cb) => cb(stored));
+
+    const data = await getStorage();
+    expect(data.settings.enabledGlobal).toBe(false);
+    expect(data.settings.sensitivity).toBe(defaults.settings.sensitivity);
+  });
+
+  test('setStorage calls chrome.storage.local.set', async () => {
+    const newData = { settings: { enabledGlobal: false } };
+    await setStorage(newData);
+    expect(global.chrome.storage.local.set).toHaveBeenCalledWith(
+      newData,
+      expect.any(Function)
+    );
+  });
+});
+
+====================================================================================================
+FILE: webpack.config.js
+====================================================================================================
+
+const path = require('path');
+const CopyPlugin = require('copy-webpack-plugin');
+
+module.exports = {
+  entry: {
+    background: './src/background.js',
+    content: './src/content.js',
+    popup: './src/popup/popup.js',
+    options: './src/options/options.js',
+    offscreen: './src/offscreen/offscreen.js',
+  },
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: '[name].js',
+    clean: true,
+  },
+  mode: 'production',
+  optimization: {
+    minimize: false,
+  },
+  plugins: [
+    new CopyPlugin({
+      patterns: [
+        { from: 'manifest.json', to: '.' },
+        { from: 'src/popup/popup.html', to: 'popup.html' },
+        { from: 'src/options/options.html', to: 'options.html' },
+        { from: 'src/offscreen/offscreen.html', to: 'offscreen.html' },
+        { from: 'src/assets', to: 'assets', noErrorOnMissing: true },
+        {
+          from: 'node_modules/@mediapipe/tasks-vision/wasm',
+          to: 'assets/wasm',
+        },
+      ],
+    }),
+  ],
+};

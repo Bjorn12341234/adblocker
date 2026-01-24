@@ -60,9 +60,14 @@ export function getImageContext(img) {
 /**
  * Scans the DOM for elements matching selectors and hides them if keywords match.
  * @param {string[]} keywords
+ * @param {Object} settings
  * @param {string[]} customSelectors
  */
-export function scanAndFilter(keywords, customSelectors = []) {
+export async function scanAndFilter(
+  keywords,
+  settings = {},
+  customSelectors = []
+) {
   if (!keywords || keywords.length === 0) return;
 
   // 1. Filter Container Elements (Layer 1)
@@ -81,6 +86,9 @@ export function scanAndFilter(keywords, customSelectors = []) {
   const images = document.querySelectorAll(
     'img:not([data-trump-filter-hidden="true"])'
   );
+
+  const imagesToScanAI = [];
+
   images.forEach((img) => {
     // Check if parent container is already hidden by us
     if (img.closest('[data-trump-filter-hidden="true"]')) return;
@@ -88,6 +96,64 @@ export function scanAndFilter(keywords, customSelectors = []) {
     const context = getImageContext(img);
     if (keywords.some((k) => context.toLowerCase().includes(k.toLowerCase()))) {
       hideElement(img, 'Image context matched keywords');
+    } else if (
+      settings.aiMode &&
+      settings.aiMode !== 'none' &&
+      settings.aiConsent &&
+      !img.dataset.trumpFilterScanning
+    ) {
+      // Mark for AI Scanning (Layer 2)
+      imagesToScanAI.push(img);
+    }
+  });
+
+  /*
+  if (imagesToScanAI.length > 0) {
+    scanImagesAI(imagesToScanAI, settings);
+  }
+  */
+}
+
+/**
+ * Sends images to the background for AI analysis
+ */
+async function scanImagesAI(images, settings) {
+  images.forEach(async (img) => {
+    // Skip if already scanning or small images
+    if (img.dataset.trumpFilterScanning || img.width < 50 || img.height < 50)
+      return;
+
+    // Check if src is valid
+    if (!img.src || img.src.startsWith('data:')) return;
+
+    img.dataset.trumpFilterScanning = 'true';
+
+    try {
+      // We send the URL to background, background fetches it and sends to offscreen
+      // Or we can convert to base64 here if it's CORS safe, but URL is easier if background can fetch.
+      // Actually, offscreen can fetch too.
+      // But passing base64 is safer for CORS if we fetch in content script (which might fail too).
+      // Let's try sending URL first.
+
+      const response = await chrome.runtime.sendMessage({
+        target: 'background',
+        type: 'CHECK_IMAGE',
+        data: {
+          url: img.src,
+          strictMode: settings.sensitivity === 'strict',
+        },
+      });
+
+      if (response && response.success && response.isBlocked) {
+        hideElement(
+          img,
+          `AI detected ${response.layer} (confidence: ${response.confidence})`
+        );
+      }
+    } catch (error) {
+      console.error('Error scanning image with AI:', error);
+    } finally {
+      delete img.dataset.trumpFilterScanning;
     }
   });
 }

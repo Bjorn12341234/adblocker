@@ -25,6 +25,19 @@ module.exports = {
         { from: 'src/popup/popup.html', to: 'popup.html' },
         { from: 'src/options/options.html', to: 'options.html' },
         { from: 'src/offscreen/offscreen.html', to: 'offscreen.html' },
+        { from: 'src/assets', to: 'assets', noErrorOnMissing: true },
+        {
+          from: 'node_modules/@mediapipe/tasks-vision/wasm',
+          to: 'assets/wasm',
+        },
+        {
+          from: 'node_modules/@huggingface/transformers/dist/*.wasm',
+          to: 'assets/wasm/[name][ext]',
+        },
+        {
+          from: 'node_modules/@huggingface/transformers/dist/*.mjs',
+          to: 'assets/wasm/[name][ext]',
+        },
       ],
     }),
   ],

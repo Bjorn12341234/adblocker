@@ -22,12 +22,12 @@ async function init() {
 
   if (keywords.length > 0) {
     // Initial scan
-    scanAndFilter(keywords);
+    scanAndFilter(keywords, data.settings);
 
     // Observe for dynamic content
     const observer = new MutationObserver(
       debounce(() => {
-        scanAndFilter(keywords);
+        scanAndFilter(keywords, data.settings);
       }, 500)
     );
 

@@ -3,3 +3,5 @@ dist/
 .DS_Store
 coverage/
 *.log
+.gemini/
+src/assets/models/siglip-base-patch16-224/onnx/model.onnx

@@ -2,6 +2,7 @@ import { getStorage, setStorage } from '../lib/storage';
 
 const globalToggle = document.getElementById('globalToggle');
 const siteToggle = document.getElementById('siteToggle');
+const aiToggle = document.getElementById('aiToggle');
 const statsCount = document.getElementById('statsCount');
 const openOptions = document.getElementById('openOptions');
 
@@ -13,6 +14,7 @@ async function init() {
 
   // Initialize UI
   globalToggle.checked = data.settings.enabledGlobal;
+  aiToggle.checked = data.settings.aiMode !== 'none';
 
   // Site toggle is "Enabled on this site"
   // If whitelisted, it's NOT enabled
@@ -24,6 +26,29 @@ async function init() {
   // Listeners
   globalToggle.addEventListener('change', async () => {
     data.settings.enabledGlobal = globalToggle.checked;
+    await setStorage(data);
+  });
+
+  aiToggle.addEventListener('change', async () => {
+    if (aiToggle.checked && !data.settings.aiConsent) {
+      const consent = confirm(
+        'Privacy Notice: Enabling AI Filtering will process images locally on your device. ' +
+          'No image data leaves your browser. This may impact battery life and performance. ' +
+          'Do you consent to local AI processing?'
+      );
+
+      if (consent) {
+        data.settings.aiConsent = true;
+        data.settings.aiMode = 'cascade';
+      } else {
+        aiToggle.checked = false;
+        return;
+      }
+    } else if (aiToggle.checked) {
+      data.settings.aiMode = 'cascade';
+    } else {
+      data.settings.aiMode = 'none';
+    }
     await setStorage(data);
   });
 

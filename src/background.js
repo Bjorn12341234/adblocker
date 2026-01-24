@@ -35,8 +35,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function handleBackgroundMessage(message, sender) {
   switch (message.type) {
     case 'CHECK_IMAGE':
-      // Forward to offscreen
-      return await sendMessageToOffscreen('SCAN_IMAGE', message.data);
+      try {
+        // Fetch image and convert to base64
+        const response = await fetch(message.data.url);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        const base64Promise = new Promise((resolve) => {
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+        const base64Data = await base64Promise;
+
+        // Forward to offscreen
+        return await sendMessageToOffscreen('SCAN_IMAGE', {
+          type: 'base64',
+          data: base64Data,
+          strictMode: message.data.strictMode,
+        });
+      } catch (error) {
+        console.error('Error fetching image for check:', error);
+        return { success: false, error: error.message };
+      }
     default:
       return { success: false, error: 'Unknown background message type' };
   }
