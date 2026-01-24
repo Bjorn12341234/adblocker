@@ -2,8 +2,8 @@
 
 ## 🚦 Current Status
 
-- **Current Phase:** Phase 3 (Context-Aware Image Filtering - Free Tier)
-- **Next Action:** Implement Context Extractor for images.
+- **Current Phase:** Phase 4 (UI - Popup & Options)
+- **Next Action:** Create popup.html with Global Toggle and Site Exclusion.
 
 ## Phase 0: Foundation Setup
 
@@ -39,10 +39,10 @@ _Backpressure: Performance < 100ms per scan on 500 elements._
 
 _Backpressure: Image with "Trump" alt text is hidden._
 
-- [ ] Implement Context Extractor (Alt text, Captions, Parent link).
-- [ ] Match context against keywords.
-- [ ] Hide images/video posters when context matches.
-- [ ] Add placeholder UI for hidden images.
+- [x] Implement Context Extractor (Alt text, Captions, Parent link).
+- [x] Match context against keywords.
+- [x] Hide images/video posters when context matches.
+- [x] Add placeholder UI for hidden images.
 
 ## Phase 4: UI (Popup & Options)
 
