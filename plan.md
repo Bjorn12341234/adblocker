@@ -2,8 +2,8 @@
 
 ## 🚦 Current Status
 
-- **Current Phase:** Phase 0 (Foundation Setup)
-- **Next Action:** Create Manifest V3 skeleton.
+- **Current Phase:** Phase 2 (DOM Content Filtering)
+- **Next Action:** Implement container selector system.
 
 ## Phase 0: Foundation Setup
 
@@ -19,11 +19,11 @@ _Backpressure: npm run lint exits 0, Extension loads in Chrome without errors._
 
 _Backpressure: Integration test shows blocked URL redirecting to block page._
 
-- [ ] Implement `declarativeNetRequest` rule builder infrastructure.
-- [ ] Create Keyword → urlFilter converter logic.
-- [ ] Implement Whitelist priority rules (Spec FR-8).
-- [ ] Add Service Worker rule updater.
-- [ ] Test: Verify URL blocking on `example.com/trump`.
+- [x] Implement `declarativeNetRequest` rule builder infrastructure.
+- [x] Create Keyword → urlFilter converter logic.
+- [x] Implement Whitelist priority rules (Spec FR-8).
+- [x] Add Service Worker rule updater.
+- [x] Test: Verify URL blocking on `example.com/trump`.
 
 ## Phase 2: DOM Content Filtering
 
