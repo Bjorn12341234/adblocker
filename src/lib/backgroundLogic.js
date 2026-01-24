@@ -2,6 +2,10 @@ import { getStorage } from './storage';
 import { generateRules } from './rules';
 
 const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
+const OFFSCREEN_TIMEOUT = 30 * 1000; // 30 seconds
+
+let creating; // A global promise to avoid concurrency issues
+let offscreenTimer = null;
 
 export async function updateRules() {
   try {
@@ -24,27 +28,62 @@ export async function updateRules() {
   }
 }
 
+async function hasOffscreenDocument() {
+  const existingContexts = await chrome.runtime.getContexts({
+    contextTypes: ['OFFSCREEN_DOCUMENT'],
+  });
+  return existingContexts.length > 0;
+}
+
+async function closeOffscreenDocument() {
+  if (creating) {
+    await creating;
+  }
+
+  try {
+    if (await hasOffscreenDocument()) {
+      await chrome.offscreen.closeDocument();
+      console.log('Offscreen document closed due to inactivity.');
+    }
+  } catch (e) {
+    console.log('Offscreen document already closed or error:', e);
+  }
+}
+
 /**
  * Ensures an offscreen document exists.
  */
 export async function setupOffscreen() {
-  // Check if it already exists
-  const existingContexts = await chrome.runtime.getContexts({
-    contextTypes: ['OFFSCREEN_DOCUMENT'],
-  });
+  const path = OFFSCREEN_DOCUMENT_PATH;
 
-  if (existingContexts.length > 0) {
+  if (await hasOffscreenDocument()) {
+    // Clear any pending close timer since we are using it
+    clearTimeout(offscreenTimer);
     return;
   }
 
-  // Create it
-  await chrome.offscreen.createDocument({
-    url: OFFSCREEN_DOCUMENT_PATH,
-    reasons: ['DOM_SCRAPING'], // Required reason for ML/DOM processing
-    justification: 'Running local ML models for image content analysis.',
-  });
+  if (creating) {
+    await creating;
+  } else {
+    creating = chrome.offscreen.createDocument({
+      url: path,
+      reasons: ['DOM_SCRAPING'], // Required reason for ML/DOM processing
+      justification: 'Running local ML models for image content analysis.',
+    });
 
-  console.log('Offscreen document created');
+    try {
+      await creating;
+      console.log('Offscreen document created');
+    } catch (err) {
+      // if it already exists, that's fine (Chrome might throw if we race check and create)
+      if (!err.message.startsWith('Only a single offscreen')) {
+        throw err;
+      }
+    }
+    creating = null;
+  }
+  // Clear any pending close timer since we are using it
+  clearTimeout(offscreenTimer);
 }
 
 /**
@@ -52,9 +91,17 @@ export async function setupOffscreen() {
  */
 export async function sendMessageToOffscreen(type, data = {}) {
   await setupOffscreen();
-  return chrome.runtime.sendMessage({
-    target: 'offscreen',
-    type,
-    data,
-  });
+
+  try {
+    const res = await chrome.runtime.sendMessage({
+      target: 'offscreen',
+      type,
+      data,
+    });
+    return res;
+  } finally {
+    // Restart timer
+    clearTimeout(offscreenTimer);
+    offscreenTimer = setTimeout(closeOffscreenDocument, OFFSCREEN_TIMEOUT);
+  }
 }

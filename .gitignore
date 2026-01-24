@@ -5,3 +5,6 @@ coverage/
 *.log
 .gemini/
 src/assets/models/siglip-base-patch16-224/onnx/model.onnx
+images_to_train_on/
+debug_output*.txt
+tm-my-image-model.zip

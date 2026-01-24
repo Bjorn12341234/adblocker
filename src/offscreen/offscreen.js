@@ -1,154 +1,97 @@
 /**
  * Offscreen Document - The GPU Worker
- * Handles heavy ML inference (MediaPipe, Transformers.js)
+ * Handles heavy ML inference using TensorFlow.js (MobileNet V1/V2)
  */
-import { FilesetResolver, ImageEmbedder } from '@mediapipe/tasks-vision';
-import { pipeline, env } from '@huggingface/transformers';
+import * as tf from '@tensorflow/tfjs';
+import { setWasmPaths } from '@tensorflow/tfjs-backend-wasm';
 
 console.log('Offscreen document loaded');
 
-// Configure transformers.js to use local models
-env.allowLocalModels = true;
-env.allowRemoteModels = false;
-env.useBrowserCache = false;
-env.localModelPath = chrome.runtime.getURL('assets/models/');
-env.backends.onnx.wasm.wasmPaths = chrome.runtime.getURL('assets/wasm/');
+let model = null;
+let labels = [];
 
-let faceEmbedder = null;
-let referenceVectors = [];
-let classifier = null;
+const MODEL_PATH = 'assets/models/mobilenet/model.json';
+const METADATA_PATH = 'assets/models/mobilenet/metadata.json';
+const WASM_DIR = 'assets/wasm/';
 
 async function initializeModel() {
   try {
-    console.log('Initializing MediaPipe FaceEmbedder...');
-    const vision = await FilesetResolver.forVisionTasks(
-      chrome.runtime.getURL('assets/wasm')
-    );
+    console.log('Loading TensorFlow.js model...');
 
-    faceEmbedder = await ImageEmbedder.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath: chrome.runtime.getURL(
-          'assets/models/face_embedder.task'
-        ),
-      },
-      runningMode: 'IMAGE',
+    // Configure WASM backend
+    setWasmPaths(chrome.runtime.getURL(WASM_DIR));
+    await tf.setBackend('wasm');
+    console.log('Using WASM backend');
+
+    // Load Metadata to get labels
+    const metadataRes = await fetch(chrome.runtime.getURL(METADATA_PATH));
+    const metadata = await metadataRes.json();
+    labels = metadata.labels;
+    console.log('Model labels:', labels);
+
+    // Load Model
+    model = await tf.loadLayersModel(chrome.runtime.getURL(MODEL_PATH));
+
+    // Warmup
+    tf.tidy(() => {
+      model.predict(tf.zeros([1, 224, 224, 3]));
     });
 
-    console.log('Loading reference vectors...');
-    const response = await fetch(
-      chrome.runtime.getURL('assets/models/trump_vectors.json')
-    );
-    referenceVectors = await response.json();
-
-    console.log('Initializing SigLIP classifier...');
-    classifier = await pipeline(
-      'zero-shot-image-classification',
-      'siglip-base-patch16-224',
-      {
-        device: 'webgpu',
-      }
-    );
-
-    console.log('MediaPipe FaceEmbedder and SigLIP initialized successfully');
+    console.log('MobileNet model initialized successfully (WASM)');
   } catch (error) {
-    console.error('Failed to initialize models:', error);
+    console.error('Failed to initialize TensorFlow model:', error);
   }
 }
 
 /**
- * Calculates cosine similarity between two vectors
+ * Preprocesses the image and runs prediction
  */
-function cosineSimilarity(vecA, vecB) {
-  if (vecA.length !== vecB.length) return 0;
-  let dotProduct = 0;
-  let mA = 0;
-  let mB = 0;
-  for (let i = 0; i < vecA.length; i++) {
-    dotProduct += vecA[i] * vecB[i];
-    mA += vecA[i] * vecA[i];
-    mB += vecB[i] * vecB[i];
-  }
-  mA = Math.sqrt(mA);
-  mB = Math.sqrt(mB);
-  if (mA * mB === 0) return 0;
-  return dotProduct / (mA * mB);
-}
+async function predict(imageElement) {
+  if (!model) return { isBlocked: false, confidence: 0 };
 
-/**
- * Checks if any face in the image matches the Trump reference vectors
- */
-async function isTrumpFace(imageBitmap) {
-  if (!faceEmbedder || referenceVectors.length === 0)
-    return { isBlocked: false, confidence: 0 };
+  return tf.tidy(() => {
+    // 1. Convert to Tensor
+    let tensor = tf.browser.fromPixels(imageElement);
 
-  try {
-    const result = faceEmbedder.embed(imageBitmap);
-    // ImageEmbedder returns ImageEmbedderResult which has embeddings array
-    // Each embedding has floatEmbedding or quantizedEmbedding
+    // 2. Resize to 224x224
+    tensor = tf.image.resizeBilinear(tensor, [224, 224]);
 
-    if (!result.embeddings || result.embeddings.length === 0) {
+    // 3. Normalize to [-1, 1] (Standard Teachable Machine preprocessing)
+    // Formula: (pixel / 127.5) - 1
+    tensor = tensor.toFloat().div(tf.scalar(127.5)).sub(tf.scalar(1));
+
+    // 4. Expand dims to batch [1, 224, 224, 3]
+    tensor = tensor.expandDims(0);
+
+    // 5. Predict
+    const predictions = model.predict(tensor);
+    const probabilities = predictions.dataSync(); // Float32Array
+
+    // 6. Map to labels
+    // Assuming labels are ["trump", "safe"]
+    const trumpIndex = labels.indexOf('trump');
+    const safeIndex = labels.indexOf('safe');
+
+    if (trumpIndex === -1) {
+      console.error('Label "trump" not found in metadata');
       return { isBlocked: false, confidence: 0 };
     }
 
-    let maxSimilarity = 0;
+    const trumpScore = probabilities[trumpIndex];
 
-    for (const embedding of result.embeddings) {
-      const vector = embedding.floatEmbedding;
-      if (!vector) continue;
-
-      for (const ref of referenceVectors) {
-        const similarity = cosineSimilarity(vector, ref.vector);
-        if (similarity > maxSimilarity) {
-          maxSimilarity = similarity;
-        }
-      }
-    }
-
-    // Threshold from spec.md: > 0.6
-    const threshold = 0.6;
-    return {
-      isBlocked: maxSimilarity > threshold,
-      confidence: maxSimilarity,
-    };
-  } catch (error) {
-    console.error('Error in isTrumpFace:', error);
-    return { isBlocked: false, confidence: 0, error: error.message };
-  }
-}
-
-/**
- * Scans image for concepts using SigLIP
- */
-async function scanContext(imageBitmap) {
-  if (!classifier) return { isBlocked: false, confidence: 0 };
-
-  try {
-    // SigLIP can take ImageBitmap directly in Transformers.js v3
-    const labels = ['Donald Trump', 'MAGA Rally', 'Politics'];
-    const result = await classifier(imageBitmap, labels);
-
-    // Result is an array of { label: string, score: number }
-    // We check if any of the target labels have a high score
-    const trumpScore =
-      result.find((r) => r.label === 'Donald Trump')?.score || 0;
-    const magaScore = result.find((r) => r.label === 'MAGA Rally')?.score || 0;
-
-    const maxScore = Math.max(trumpScore, magaScore);
-    const threshold = 0.5; // Adjusted for SigLIP confidence
+    // Threshold > 0.85 for high confidence
+    const isBlocked = trumpScore > 0.85;
 
     return {
-      isBlocked: maxScore > threshold,
-      confidence: maxScore,
-      labels: result,
+      isBlocked,
+      confidence: trumpScore,
+      layer: 'mobilenet',
     };
-  } catch (error) {
-    console.error('Error in scanContext:', error);
-    return { isBlocked: false, confidence: 0, error: error.message };
-  }
+  });
 }
 
 // Initialize immediately
-// initializeModel();
+initializeModel();
 
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -161,49 +104,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handleMessage(message) {
-  // console.log('Offscreen received message:', message.type);
-
   switch (message.type) {
     case 'PING':
       return { success: true, data: 'PONG' };
 
     case 'SCAN_IMAGE':
-      return { success: false, error: 'AI Disabled' };
-    /*
-      if (!faceEmbedder) {
+      if (!model) {
         return { success: false, error: 'Model not initialized' };
       }
-      
+
       try {
-        let imageBitmap;
-        if (message.data.type === 'blob') {
-          // data.data is a Blob or ArrayBuffer
-          const blob = new Blob([message.data.data], { type: message.data.mimeType });
-          imageBitmap = await createImageBitmap(blob);
-        } else if (message.data.type === 'base64') {
-          const res = await fetch(message.data.data);
-          const blob = await res.blob();
-          imageBitmap = await createImageBitmap(blob);
+        // Load image from base64 or Blob
+        const img = new Image();
+
+        if (message.data.type === 'base64') {
+          img.src = message.data.data;
         } else {
-          return { success: false, error: 'Unsupported payload type' };
+          // Handle Blob logic if we implement that later
+          return { success: false, error: 'Only base64 supported currently' };
         }
 
-        const faceResult = await isTrumpFace(imageBitmap);
-        if (faceResult.isBlocked) {
-          return { success: true, ...faceResult, layer: 'face' };
-        }
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
 
-        // Layer B: Concept (only if strictMode is requested and face didn't match)
-        if (message.data.strictMode) {
-          const conceptResult = await scanContext(imageBitmap);
-          return { success: true, ...conceptResult, layer: 'concept' };
-        }
-
-        return { success: true, ...faceResult, layer: 'face' };
+        const result = await predict(img);
+        return { success: true, ...result };
       } catch (error) {
+        console.error('Scan Error:', error);
         return { success: false, error: error.message };
       }
-      */
 
     default:
       return { success: false, error: 'Unknown message type' };

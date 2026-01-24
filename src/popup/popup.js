@@ -39,16 +39,17 @@ async function init() {
 
       if (consent) {
         data.settings.aiConsent = true;
-        data.settings.aiMode = 'cascade';
+        data.settings.aiMode = 'mobilenet';
       } else {
         aiToggle.checked = false;
         return;
       }
     } else if (aiToggle.checked) {
-      data.settings.aiMode = 'cascade';
+      data.settings.aiMode = 'mobilenet';
     } else {
       data.settings.aiMode = 'none';
     }
+    console.log('Saving settings:', data.settings);
     await setStorage(data);
   });
 
