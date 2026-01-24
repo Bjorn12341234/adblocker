@@ -2,8 +2,8 @@
 
 ## 🚦 Current Status
 
-- **Current Phase:** COMPLETED
-- **Next Action:** None.
+- **Current Phase:** Phase 8: Robustness & Data Flow
+- **Next Action:** Optimize Data Transport.
 
 ## Phase 0: Foundation Setup
 
@@ -60,15 +60,49 @@ _Backpressure: Offscreen document loads and replies to "ping"._
 - [x] Implement `background.js` logic to spawn/manage the Offscreen Document.
 - [x] Implement Messaging Bridge: Content Script -> Background -> Offscreen -> Background -> Content Script.
 
-## Phase 6: Biometric & Concept Filtering (Premium Core)
+## Phase 6: Visual Classification (MobileNet) - V1 Core
 
-_Backpressure: Face detected >90% accuracy, SigLIP runs <200ms._
+_Backpressure: MobileNet runs < 100ms, Bundle size < 15MB._
 
-- [x] **Asset Prep:** Download and bundle `face_embedder.task` (MediaPipe) and `siglip-base-patch16-224-q8` (Transformers.js).
-- [x] **Layer A (Face):** Initialize MediaPipe `FaceEmbedder` in Offscreen.
-- [x] **Layer A (Face):** Create/Load "Trump Reference Vectors" (JSON).
-- [x] **Layer A (Face):** Implement `isTrumpFace()` logic (Cosine Similarity).
-- [x] **Layer B (Concept):** Initialize Transformers.js `pipeline` in Offscreen (WebGPU).
-- [x] **Layer B (Concept):** Implement `scanContext()` logic (Zero-shot classification).
-- [x] **Integration:** Connect Content Script image scanner to the Offscreen Cascade.
-- [x] **Privacy:** Implement "Opt-In" Consent Dialog (GDPR).
+- [x] **Acquire Model:** Train & Download `model.json` + `weights.bin` (Trump vs Safe) via Teachable Machine.
+- [x] **Install Engine:** Add `tensorflow/tfjs` or `tfjs-tflite`.
+- [x] **Implement Logic:** Replace complex Cascade code in `offscreen.js` with simple TFJS `model.predict()`.
+- [x] **Cleanup:** Disable/Comment out MediaPipe Face detection code (Save for V2).
+
+## Phase 7: Performance & Stability Hardening
+
+_Backpressure: No memory leaks, Offscreen closes after 30s._
+
+- [x] **Debug Architecture:** Create `scripts/debug_extension.js` to run extension in Puppeteer with WebGPU enabled and log forwarding.
+- [x] **Fix Offscreen Lifecycle (NFR-3):** Implement a "Keep-Alive" timer in `backgroundLogic.js`. Close document after 30s of inactivity.
+- [x] **Fix Async Loop Bug:** Refactor `scanImagesAI` in `dom.js`. Replace `forEach` (which doesn't await) with `p-limit` or batched `Promise.all` to prevent CPU spikes.
+- [ ] **Memory Cleanup:** Add `disconnect()` logic for `MutationObserver` in `content.js` on window unload.
+
+## Phase 8: Robustness & Data Flow
+
+_Backpressure: Images on authenticated sites (e.g., behind logins) are correctly scanned._
+
+- [x] **Refactor Image Fetching (CORS Fix):** Move image fetching from Background (`fetch(url)`) to Content Script (`fetch(url)` -> `Blob`).
+- [ ] **Optimize Data Transport:** Switch messaging from Base64 strings (2x memory) to `Blob` / `ArrayBuffer`.
+- [ ] **Error Handling Wrapper:** Wrap `chrome.runtime.sendMessage` in `content.js` to catch "Extension Context Invalidated" errors during updates/reloads.
+
+## Phase 9: UX Polish & Observability
+
+_Backpressure: Popup shows real numbers; Placeholders explain *why* content was hidden._
+
+- [ ] **Implement Stats Persistence:** Create `stats.js` lib. Track `blockedCount` in `chrome.storage.local`. Hook up Popup UI to real data.
+- [ ] **Smart Placeholders:**
+  - Refactor `createPlaceholder` to use aspect-ratio boxes (prevent layout shift).
+  - Add Tooltip: Hovering placeholder shows "Blocked by [Face/Context] (Confidence: X%)".
+- [ ] **Dynamic Sensitivity:** Wire up `options.html` sensitivity (Light/Balanced/Strict) to actual numerical thresholds in `offscreen.js` (e.g., Strict = 0.5, Balanced = 0.65).
+
+## Phase 10: Automated Quality Assurance
+
+_Backpressure: Full E2E suite passes._
+
+- [ ] **E2E Testing:** Set up Puppeteer to load the extension and visit a local test page with "Trump" images. Verify hiding behavior.
+
+## Future / Icebox (V2)
+
+- [ ] **Face Detection:** Re-enable MediaPipe FaceEmbedder.
+- [ ] **Vector Database:** Improve Trump Vector accuracy.
