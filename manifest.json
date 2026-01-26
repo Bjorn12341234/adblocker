@@ -17,7 +17,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Trump Filter Settings"
+    "default_title": "The Orange Filter Settings"
   },
   "options_ui": {
     "page": "options.html",
