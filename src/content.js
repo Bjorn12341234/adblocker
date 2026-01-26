@@ -48,7 +48,7 @@ async function init() {
 }
 
 // Cleanup on unload
-window.addEventListener('unload', () => {
+window.addEventListener('pagehide', () => {
   if (observer) {
     observer.disconnect();
     observer = null;

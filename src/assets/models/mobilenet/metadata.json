@@ -1,6 +1,0 @@
-{
-  "labels": ["hard_negatives", "safe", "trump"],
-  "modelName": "MobileNetV3Small-TrumpFilter",
-  "version": "2.0.0",
-  "inputRange": "[0, 255] (Internal Norm)"
-}

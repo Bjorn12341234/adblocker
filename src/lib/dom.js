@@ -125,8 +125,8 @@ async function fetchImageAsBlob(url) {
     const response = await fetch(url);
     if (!response.ok) return null;
     return await response.blob();
-  } catch {
-    // console.warn('Content Script fetch failed for:', url, error);
+  } catch (error) {
+    console.warn('Content Script fetch failed for:', url, error);
     return null;
   }
 }
@@ -144,7 +144,7 @@ async function safeSendMessage(message) {
   } catch (error) {
     if (error.message.includes('Extension context invalidated')) {
       // console.warn('Trump Filter: Extension context invalidated. Reload page to resume filtering.');
-      return null;
+      return { success: false, error: 'Extension context invalidated' };
     }
     throw error;
   }
@@ -177,6 +177,7 @@ async function scanImagesAI(images, settings) {
     img.dataset.trumpFilterScanning = 'true';
 
     try {
+      let payload = { url: src, sensitivity: settings.sensitivity };
       let blob = null;
 
       // Handle data URLs or fetch remote
@@ -184,16 +185,22 @@ async function scanImagesAI(images, settings) {
         const res = await fetch(src);
         blob = await res.blob();
       } else {
-        blob = await fetchImageAsBlob(src);
+        // Prefer Canvas/Base64 extraction from the DOM element first
+        // This avoids re-fetching (which fails in some envs/tests) and uses the exact image user sees
+        try {
+          const base64 = await imageToBase64(img);
+          if (base64) {
+            payload.data = base64;
+            payload.type = 'base64';
+          }
+        } catch (e) {
+          // If canvas fails (e.g. tainted), fall back to fetch
+          blob = await fetchImageAsBlob(src);
+        }
       }
 
-      const payload = {
-        url: src,
-        sensitivity: settings.sensitivity || 'balanced',
-      };
-
-      // Send as Base64 (more reliable than Blob in some MV3 versions)
-      if (blob) {
+      // If we got a blob from fetch fallback or data URL, convert to base64
+      if (!payload.data && blob) {
         const reader = new FileReader();
         const base64Promise = new Promise((resolve) => {
           reader.onloadend = () => resolve(reader.result);
@@ -203,11 +210,18 @@ async function scanImagesAI(images, settings) {
         payload.type = 'base64';
       }
 
+      // If we still have no data, the background will try to fetch (and likely fail in tests),
+      // but we've done our best.
+
       const response = await safeSendMessage({
         target: 'background',
         type: 'CHECK_IMAGE',
         data: payload,
       });
+
+      if (response) {
+        img.dataset.trumpFilterDebug = JSON.stringify(response);
+      }
 
       if (response && response.success) {
         const confidencePct = Math.round(response.confidence * 100);
@@ -220,6 +234,7 @@ async function scanImagesAI(images, settings) {
       }
     } catch (error) {
       console.error('Error scanning image with AI:', error);
+      img.dataset.trumpError = error.toString();
     } finally {
       delete img.dataset.trumpFilterScanning;
       processNext();
@@ -349,4 +364,36 @@ function createPlaceholder(img, reason) {
   });
 
   return placeholder;
+}
+
+/**
+ * Converts an Image element to a Base64 string using Canvas.
+ * Useful as a fallback when fetch fails.
+ * @param {HTMLImageElement} img
+ * @returns {Promise<string>}
+ */
+function imageToBase64(img) {
+  return new Promise((resolve, reject) => {
+    (async () => {
+      try {
+        if (!img.complete) {
+          await img.decode().catch(() => {});
+        }
+        if (img.naturalWidth === 0) {
+          return resolve(null);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+
+        // Attempt to draw
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg'));
+      } catch (e) {
+        reject(e);
+      }
+    })();
+  });
 }

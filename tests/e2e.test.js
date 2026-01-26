@@ -36,7 +36,7 @@ describe('Trump Filter E2E', () => {
     page = await browser.newPage();
     page.on('console', (msg) => console.log('[PAGE]', msg.text()));
 
-    // 1. Setup Interception to serve test page and assets
+    // 1. Setup Interception
     await page.setRequestInterception(true);
     page.on('request', (request) => {
       const url = request.url();
@@ -63,7 +63,24 @@ describe('Trump Filter E2E', () => {
       }
     });
 
-    // 2. Navigate to test page
+    // 2. Enable AI Consent via Background Worker
+    const workerTarget = await browser.waitForTarget(
+      (target) => target.type() === 'service_worker'
+    );
+    const worker = await workerTarget.worker();
+    await worker.evaluate(() => {
+      chrome.storage.local.set({
+        settings: {
+          enabledGlobal: true,
+          aiMode: 'balanced',
+          aiConsent: true,
+        },
+      });
+    });
+    console.log('Enabled AI Consent via background worker');
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // 3. Navigate to test page
     console.log('Navigating to test page...');
     await page.goto('http://mytestsite.com/test', {
       waitUntil: 'networkidle0',
@@ -111,10 +128,13 @@ describe('Trump Filter E2E', () => {
           (window.getComputedStyle(img).display === 'none' ||
             img.dataset.trumpFilterHidden === 'true'),
         scanning: img && img.dataset.trumpFilterScanning === 'true',
+        debug: img && img.dataset.trumpFilterDebug,
+        error: img && img.dataset.trumpError,
       };
     });
     console.log('AI Match Result:', aiMatchResult);
     // Note: AI might fail to hide if confidence is low, but should not crash
+    expect(aiMatchResult.hidden).toBe(true);
 
     // 7. Verify Safe Image is NOT hidden
     const safeResult = await page.evaluate(() => {

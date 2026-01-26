@@ -54,7 +54,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ status: modelStatus });
       return false;
     }
-    handleBackgroundMessage(message, sender).then(sendResponse);
+    handleBackgroundMessage(message, sender)
+      .then(sendResponse)
+      .catch((error) => {
+        console.error('Background message handler failed:', error);
+        sendResponse({ success: false, error: error.message });
+      });
     return true;
   }
 });

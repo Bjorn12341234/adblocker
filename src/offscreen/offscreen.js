@@ -19,8 +19,8 @@ let labels = [];
 let isInitializing = false;
 let initPromise = null;
 
-const MODEL_PATH = 'assets/models/mobilenet/model.json';
-const METADATA_PATH = 'assets/models/mobilenet/metadata.json';
+const MODEL_PATH = 'assets/models/tm-model/model.json';
+const METADATA_PATH = 'assets/models/tm-model/metadata.json';
 const WASM_DIR = 'assets/wasm/';
 
 async function initializeModel() {
@@ -30,7 +30,7 @@ async function initializeModel() {
   isInitializing = true;
   initPromise = (async () => {
     try {
-      console.log('Loading TensorFlow.js model...');
+      console.log('Loading TensorFlow.js model (Teachable Machine)...');
 
       // 1. Verify Assets Exist (Fail Fast)
       const assetChecks = [
@@ -87,7 +87,7 @@ async function initializeModel() {
         model.predict(zeros([1, 224, 224, 3]));
       });
 
-      console.log('MobileNet model initialized successfully (WASM)');
+      console.log('Teachable Machine model initialized successfully (WASM)');
     } catch (error) {
       console.error('Failed to initialize TensorFlow model:', error);
       throw error;
@@ -114,10 +114,9 @@ async function predict(imageElement, threshold = 0.85) {
     tensor = tfImage.resizeBilinear(tensor, [224, 224]);
 
     // 3. Normalize:
-    // The new MobileNetV3 model has a Rescaling(1./255) layer built-in at the start.
-    // It expects inputs in [0, 255] range.
-    // browser.fromPixels returns [0, 255] int32, so we just cast to float.
-    tensor = tensor.toFloat();
+    // Teachable Machine models typically expect inputs in [-1, 1] range.
+    // (pixel / 127.5) - 1
+    tensor = tensor.toFloat().div(127.5).sub(1);
 
     // 4. Expand dims to batch [1, 224, 224, 3]
     tensor = tensor.expandDims(0);
@@ -127,11 +126,11 @@ async function predict(imageElement, threshold = 0.85) {
     const probabilities = predictions.dataSync(); // Float32Array
 
     // 6. Map to labels
-    // Labels are loaded from metadata: e.g., ["hard_negatives", "safe", "trump"]
-    const trumpIndex = labels.indexOf('trump');
+    // Labels are loaded from metadata: e.g., ["Trump", "Safe", "Hard negatives"]
+    const trumpIndex = labels.indexOf('Trump');
 
     if (trumpIndex === -1) {
-      console.error('Label "trump" not found in metadata');
+      console.error('Label "Trump" not found in metadata');
       return { isBlocked: false, confidence: 0 };
     }
 
@@ -140,10 +139,14 @@ async function predict(imageElement, threshold = 0.85) {
     // Threshold check
     const isBlocked = trumpScore > threshold;
 
+    console.log(
+      `Prediction: ${trumpScore} (Threshold: ${threshold}) -> Blocked: ${isBlocked}`
+    );
+
     return {
       isBlocked,
       confidence: trumpScore,
-      layer: 'mobilenet-v3',
+      layer: 'teachable-machine',
     };
   });
 }
