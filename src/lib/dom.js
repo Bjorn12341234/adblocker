@@ -74,16 +74,18 @@ export async function scanAndFilter(
   if (!keywords || keywords.length === 0) return;
 
   // 1. Filter Container Elements (Layer 1)
-  const selectors = [...DEFAULT_SELECTORS, ...customSelectors];
-  const elements = document.querySelectorAll(selectors.join(', '));
+  if (settings.sensitivity !== 'pictures-only') {
+    const selectors = [...DEFAULT_SELECTORS, ...customSelectors];
+    const elements = document.querySelectorAll(selectors.join(', '));
 
-  elements.forEach((el) => {
-    if (el.dataset.trumpFilterHidden === 'true') return;
+    elements.forEach((el) => {
+      if (el.dataset.trumpFilterHidden === 'true') return;
 
-    if (containsKeywords(el, keywords)) {
-      hideElement(el, 'Container matched keywords');
-    }
-  });
+      if (containsKeywords(el, keywords)) {
+        hideElement(el, 'Container matched keywords');
+      }
+    });
+  }
 
   // 2. Filter Images (Layer 3 - Contextual)
   const images = document.querySelectorAll(

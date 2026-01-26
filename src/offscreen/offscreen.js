@@ -199,6 +199,8 @@ async function handleMessage(message) {
           threshold = 0.65;
         } else if (message.data.sensitivity === 'light') {
           threshold = 0.95;
+        } else if (message.data.sensitivity === 'pictures-only') {
+          threshold = 0.85;
         }
 
         // We use a base threshold of 0.65 for detection to allow "grey zone" handling in the content script,
