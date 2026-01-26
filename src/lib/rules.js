@@ -1,9 +1,14 @@
 /**
  * Generates declarativeNetRequest rules from settings and lists.
  * @param {Object} lists - The lists object from storage { whitelist: [], userKeywords: [] }
+ * @param {Object} settings - The settings object { enabledGlobal: boolean }
  * @returns {Array} - Array of chrome.declarativeNetRequest.Rule objects
  */
-export function generateRules(lists) {
+export function generateRules(lists, settings = {}) {
+  if (settings.enabledGlobal === false) {
+    return [];
+  }
+
   const rules = [];
   let idCounter = 1;
 
@@ -39,6 +44,15 @@ export function generateRules(lists) {
           urlFilter: `*${keyword}*`,
           resourceTypes: ['main_frame'],
           isUrlFilterCaseSensitive: false,
+          excludedDomains: [
+            'google.com',
+            'bing.com',
+            'duckduckgo.com',
+            'yahoo.com',
+            'baidu.com',
+            'yandex.ru',
+            'yandex.com',
+          ],
         },
       });
     });

@@ -1,0 +1,5 @@
+tensorflow
+tensorflowjs
+keras-cv
+numpy
+pillow

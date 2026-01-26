@@ -5,6 +5,7 @@ describe('Storage', () => {
 
   beforeEach(() => {
     global.chrome = {
+      runtime: { lastError: null },
       storage: {
         local: {
           get: jest.fn((key, cb) => cb({})),

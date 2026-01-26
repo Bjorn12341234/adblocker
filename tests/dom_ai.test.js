@@ -63,7 +63,8 @@ describe('DOM AI Scanning', () => {
         type: 'CHECK_IMAGE',
         data: expect.objectContaining({
           url: 'https://example.com/photo.jpg',
-          base64: expect.stringContaining('data:'), // FileReader result should look like data url
+          type: 'base64',
+          data: expect.stringContaining('data:image/jpeg;base64,'),
         }),
       })
     );
@@ -107,5 +108,37 @@ describe('DOM AI Scanning', () => {
     // Ensure base64 is NOT present in the call arguments
     const callArgs = sendMessageMock.mock.calls[0][0];
     expect(callArgs.data.base64).toBeUndefined();
+  });
+
+  test('scanImagesAI blurs image in grey zone (0.65 < confidence < 0.85)', async () => {
+    document.body.innerHTML = `
+      <img id="grey-img" src="https://example.com/grey.jpg" width="100" height="100">
+    `;
+
+    global.fetch.mockResolvedValue({
+      ok: true,
+      blob: () => Promise.resolve(new Blob(['data'])),
+    });
+
+    // Mock AI response in grey zone
+    sendMessageMock.mockResolvedValue({
+      success: true,
+      isBlocked: false,
+      confidence: 0.75,
+      layer: 'mobilenet',
+    });
+
+    const settings = {
+      aiMode: 'balanced',
+      aiConsent: true,
+      sensitivity: 'balanced',
+    };
+
+    await scanAndFilter(['nomatch'], settings);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const img = document.getElementById('grey-img');
+    expect(img.style.filter).toBe('blur(20px)');
+    expect(img.dataset.trumpFilterHidden).toBe('true');
   });
 });

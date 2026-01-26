@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { containsKeywords, scanAndFilter } from '../src/lib/dom';
+import { containsKeywords, scanAndFilter, blurElement } from '../src/lib/dom';
 
 describe('DOM Filtering', () => {
   beforeEach(() => {
@@ -80,6 +80,42 @@ describe('DOM Filtering', () => {
 
     const placeholder = document.querySelector('.trump-filter-placeholder');
     expect(placeholder).not.toBeNull();
-    expect(placeholder.textContent).toBe('Content Filtered');
+    expect(placeholder.textContent).toBe(
+      'Filtered Content (Click to show)Report False Positive'
+    );
+  });
+
+  test('clicking placeholder reveals the image', () => {
+    document.body.innerHTML =
+      '<img id="img" alt="Trump" src="t.jpg" width="200" height="100">';
+    const img = document.getElementById('img');
+
+    scanAndFilter(['trump']);
+
+    const placeholder = document.querySelector('.trump-filter-placeholder');
+    expect(img.style.display).toBe('none');
+
+    placeholder.click();
+
+    expect(img.style.display).toBe('');
+    expect(img.dataset.trumpFilterHidden).toBe('false');
+    expect(img.dataset.trumpFilterRevealed).toBe('true');
+    expect(document.querySelector('.trump-filter-placeholder')).toBeNull();
+  });
+
+  test('blurElement applies blur and reveals on click', () => {
+    document.body.innerHTML = '<img id="img" src="t.jpg">';
+    const img = document.getElementById('img');
+
+    blurElement(img, 'test reason');
+
+    expect(img.style.filter).toBe('blur(20px)');
+    expect(img.dataset.trumpFilterHidden).toBe('true');
+
+    img.click();
+
+    expect(img.style.filter).toBe('');
+    expect(img.dataset.trumpFilterHidden).toBe('false');
+    expect(img.dataset.trumpFilterRevealed).toBe('true');
   });
 });

@@ -45,17 +45,21 @@ describe('Background Logic', () => {
 
   test('updateRules fetches storage, generates rules, and updates DNR', async () => {
     const mockLists = { whitelist: ['test.com'], userKeywords: ['word'] };
+    const mockSettings = { enabledGlobal: true };
     const mockRules = [{ id: 1, action: { type: 'block' } }];
     const existingRules = [{ id: 999 }];
 
-    storage.getStorage.mockResolvedValue({ lists: mockLists });
+    storage.getStorage.mockResolvedValue({
+      lists: mockLists,
+      settings: mockSettings,
+    });
     rules.generateRules.mockReturnValue(mockRules);
     mockGetDynamicRules.mockResolvedValue(existingRules);
 
     await updateRules();
 
     expect(storage.getStorage).toHaveBeenCalled();
-    expect(rules.generateRules).toHaveBeenCalledWith(mockLists);
+    expect(rules.generateRules).toHaveBeenCalledWith(mockLists, mockSettings);
     expect(mockGetDynamicRules).toHaveBeenCalled();
     expect(mockUpdateDynamicRules).toHaveBeenCalledWith({
       removeRuleIds: [999],

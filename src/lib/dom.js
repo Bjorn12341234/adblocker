@@ -11,6 +11,9 @@ export const DEFAULT_SELECTORS = [
   '.post',
   '.content-item',
   'div[role="article"]',
+  'div[role="listitem"]',
+  '.g', // Google Search Result
+  '.b_algo', // Bing Search Result
 ];
 
 /**
@@ -84,7 +87,7 @@ export async function scanAndFilter(
 
   // 2. Filter Images (Layer 3 - Contextual)
   const images = document.querySelectorAll(
-    'img:not([data-trump-filter-hidden="true"])'
+    'img:not([data-trump-filter-hidden="true"]):not([data-trump-filter-revealed="true"])'
   );
 
   const imagesToScanAI = [];
@@ -113,24 +116,37 @@ export async function scanAndFilter(
 }
 
 /**
- * Fetches an image URL and converts it to a base64 string.
+ * Fetches an image URL and returns it as a Blob.
  * @param {string} url
- * @returns {Promise<string|null>}
+ * @returns {Promise<Blob|null>}
  */
-async function fetchImageAsBase64(url) {
+async function fetchImageAsBlob(url) {
   try {
     const response = await fetch(url);
     if (!response.ok) return null;
-    const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
+    return await response.blob();
+  } catch {
     // console.warn('Content Script fetch failed for:', url, error);
     return null;
+  }
+}
+
+import { incrementBlockedCount } from './stats';
+
+/**
+ * Safely sends a message to the background script, handling 'Extension context invalidated' errors.
+ * @param {Object} message
+ * @returns {Promise<Object|null>}
+ */
+async function safeSendMessage(message) {
+  try {
+    return await chrome.runtime.sendMessage(message);
+  } catch (error) {
+    if (error.message.includes('Extension context invalidated')) {
+      // console.warn('Trump Filter: Extension context invalidated. Reload page to resume filtering.');
+      return null;
+    }
+    throw error;
   }
 }
 
@@ -141,7 +157,6 @@ async function fetchImageAsBase64(url) {
 async function scanImagesAI(images, settings) {
   const CONCURRENCY_LIMIT = 3;
   const queue = [...images];
-  let activeCount = 0;
 
   const processNext = async () => {
     if (queue.length === 0) return;
@@ -159,44 +174,54 @@ async function scanImagesAI(images, settings) {
       return processNext();
     }
 
-    activeCount++;
     img.dataset.trumpFilterScanning = 'true';
 
     try {
-      let base64Data = null;
+      let blob = null;
 
+      // Handle data URLs or fetch remote
       if (src.startsWith('data:')) {
-        base64Data = src;
+        const res = await fetch(src);
+        blob = await res.blob();
       } else {
-        base64Data = await fetchImageAsBase64(src);
+        blob = await fetchImageAsBlob(src);
       }
 
       const payload = {
         url: src,
-        strictMode: settings.sensitivity === 'strict',
+        sensitivity: settings.sensitivity || 'balanced',
       };
 
-      if (base64Data) {
-        payload.base64 = base64Data;
+      // Send as Base64 (more reliable than Blob in some MV3 versions)
+      if (blob) {
+        const reader = new FileReader();
+        const base64Promise = new Promise((resolve) => {
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+        payload.data = await base64Promise;
+        payload.type = 'base64';
       }
 
-      const response = await chrome.runtime.sendMessage({
+      const response = await safeSendMessage({
         target: 'background',
         type: 'CHECK_IMAGE',
         data: payload,
       });
 
-      if (response && response.success && response.isBlocked) {
-        hideElement(
-          img,
-          `AI detected ${response.layer} (confidence: ${response.confidence})`
-        );
+      if (response && response.success) {
+        const confidencePct = Math.round(response.confidence * 100);
+        if (response.isBlocked) {
+          hideElement(img, `AI detected ${response.layer} (${confidencePct}%)`);
+        } else if (response.confidence > 0.65) {
+          // Grey Zone: Blur instead of hide
+          blurElement(img, `AI low-confidence match (${confidencePct}%)`);
+        }
       }
     } catch (error) {
       console.error('Error scanning image with AI:', error);
     } finally {
       delete img.dataset.trumpFilterScanning;
-      activeCount--;
       processNext();
     }
   };
@@ -209,7 +234,7 @@ async function scanImagesAI(images, settings) {
 
 function hideElement(el, reason) {
   if (el.tagName === 'IMG') {
-    const placeholder = createPlaceholder(el);
+    const placeholder = createPlaceholder(el, reason);
     el.parentNode.insertBefore(placeholder, el);
     el.style.display = 'none';
   } else {
@@ -217,39 +242,111 @@ function hideElement(el, reason) {
   }
   el.dataset.trumpFilterHidden = 'true';
   console.log(`Trump Filter: Hidden an element (${reason}).`);
+
+  // Track stats
+  incrementBlockedCount(1);
 }
 
-function createPlaceholder(img) {
+export function blurElement(el, reason) {
+  el.style.filter = 'blur(20px)';
+  el.style.cursor = 'pointer';
+  el.title = `Filtered: ${reason} (Click to show / Right-click to report)`;
+  el.dataset.trumpFilterHidden = 'true'; // Count as hidden for mutation observer purposes
+
+  el.addEventListener('click', function onClick(e) {
+    e.stopPropagation();
+    el.style.filter = '';
+    el.style.cursor = '';
+    el.title = '';
+    el.dataset.trumpFilterHidden = 'false';
+    el.dataset.trumpFilterRevealed = 'true';
+    el.removeEventListener('click', onClick);
+  });
+
+  el.addEventListener('contextmenu', function onRightClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm('Report this image as a False Positive?')) {
+      console.log(
+        `Trump Filter: User reported false positive (blur) for ${el.src || el.currentSrc}. Reason: ${reason}`
+      );
+      el.click(); // Reveal it too
+    }
+  });
+
+  console.log(`Trump Filter: Blurred an element (${reason}).`);
+  incrementBlockedCount(1);
+}
+
+function createPlaceholder(img, reason) {
   const placeholder = document.createElement('div');
   placeholder.className = 'trump-filter-placeholder';
+  placeholder.title = `Filtered: ${reason}`;
 
   // Copy relevant styles for layout preservation
   const styles = window.getComputedStyle(img);
+  const width = img.naturalWidth || img.width || parseInt(styles.width);
+  const height = img.naturalHeight || img.height || parseInt(styles.height);
+
+  // Set dimensions
   placeholder.style.width =
-    styles.width !== '0px'
-      ? styles.width
-      : img.width
-        ? img.width + 'px'
-        : '100%';
-  placeholder.style.height =
-    styles.height !== '0px'
-      ? styles.height
-      : img.height
-        ? img.height + 'px'
-        : '150px';
+    styles.width !== '0px' ? styles.width : width ? width + 'px' : '100%';
+
+  if (width && height) {
+    placeholder.style.aspectRatio = `${width} / ${height}`;
+    placeholder.style.height = 'auto';
+  } else {
+    placeholder.style.height =
+      styles.height !== '0px' ? styles.height : '150px';
+  }
+
   placeholder.style.display =
     styles.display === 'inline' ? 'inline-block' : styles.display;
 
-  placeholder.style.backgroundColor = '#f0f0f0';
-  placeholder.style.border = '1px solid #ccc';
-  placeholder.style.color = '#666';
+  placeholder.style.backgroundColor = '#f4f4f4';
+  placeholder.style.backgroundImage =
+    'linear-gradient(45deg, #f4f4f4 25%, #eeeeee 25%, #eeeeee 50%, #f4f4f4 50%, #f4f4f4 75%, #eeeeee 75%, #eeeeee 100%)';
+  placeholder.style.backgroundSize = '20px 20px';
+  placeholder.style.border = '1px solid #ddd';
+  placeholder.style.color = '#888';
   placeholder.style.display = 'flex';
   placeholder.style.alignItems = 'center';
   placeholder.style.justifyContent = 'center';
-  placeholder.style.fontSize = '12px';
-  placeholder.style.fontFamily = 'sans-serif';
+  placeholder.style.fontSize = '11px';
+  placeholder.style.fontWeight = '500';
+  placeholder.style.fontFamily = 'system-ui, -apple-system, sans-serif';
   placeholder.style.textAlign = 'center';
-  placeholder.textContent = 'Content Filtered';
+  placeholder.style.overflow = 'hidden';
+  placeholder.style.cursor = 'pointer';
+  placeholder.style.flexDirection = 'column';
+  placeholder.style.gap = '4px';
+
+  const text = document.createElement('div');
+  text.textContent = 'Filtered Content (Click to show)';
+  placeholder.appendChild(text);
+
+  const report = document.createElement('div');
+  report.textContent = 'Report False Positive';
+  report.style.fontSize = '9px';
+  report.style.textDecoration = 'underline';
+  report.style.opacity = '0.7';
+  report.addEventListener('click', (e) => {
+    e.stopPropagation();
+    console.log(
+      `Trump Filter: User reported false positive for ${img.src || img.currentSrc}. Reason: ${reason}`
+    );
+    placeholder.click();
+    alert('Thank you for your report! (Logged to console)');
+  });
+  placeholder.appendChild(report);
+
+  placeholder.addEventListener('click', (e) => {
+    e.stopPropagation();
+    placeholder.remove();
+    img.style.display = '';
+    img.dataset.trumpFilterHidden = 'false';
+    img.dataset.trumpFilterRevealed = 'true';
+  });
 
   return placeholder;
 }

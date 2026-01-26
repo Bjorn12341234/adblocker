@@ -1,11 +1,6 @@
 {
-  "tfjsVersion": "1.7.4",
-  "tmVersion": "2.4.10",
-  "packageVersion": "0.8.4-alpha2",
-  "packageName": "@teachablemachine/image",
-  "timeStamp": "2026-01-24T13:42:51.582Z",
-  "userMetadata": {},
-  "modelName": "tm-my-image-model",
-  "labels": ["trump", "safe"],
-  "imageSize": 224
+  "labels": ["hard_negatives", "safe", "trump"],
+  "modelName": "MobileNetV3Small-TrumpFilter",
+  "version": "2.0.0",
+  "inputRange": "[0, 255] (Internal Norm)"
 }

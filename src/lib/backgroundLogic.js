@@ -10,7 +10,7 @@ let offscreenTimer = null;
 export async function updateRules() {
   try {
     const data = await getStorage();
-    const newRules = generateRules(data.lists);
+    const newRules = generateRules(data.lists, data.settings);
 
     const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
     const removeRuleIds = existingRules.map((rule) => rule.id);

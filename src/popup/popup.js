@@ -20,8 +20,40 @@ async function init() {
   // If whitelisted, it's NOT enabled
   siteToggle.checked = !data.lists.whitelist.includes(domain);
 
-  // Stats (placeholder for now)
-  statsCount.textContent = '0';
+  // Stats
+  statsCount.textContent = (data.stats?.blockedCount || 0).toLocaleString();
+
+  // Model Status
+  const aiStatus = document.getElementById('aiStatus');
+  const modelStatusText = document.getElementById('modelStatusText');
+
+  const updateModelStatus = async () => {
+    if (data.settings.aiMode !== 'none') {
+      aiStatus.style.display = 'block';
+      chrome.runtime.sendMessage(
+        { target: 'background', type: 'GET_MODEL_STATUS' },
+        (response) => {
+          if (response && response.status) {
+            modelStatusText.textContent =
+              response.status.charAt(0).toUpperCase() +
+              response.status.slice(1);
+            if (response.status === 'loading') {
+              modelStatusText.style.color = '#ff9800';
+            } else if (response.status === 'ready') {
+              modelStatusText.style.color = '#4caf50';
+            } else if (response.status === 'error') {
+              modelStatusText.style.color = '#f44336';
+            }
+          }
+        }
+      );
+    } else {
+      aiStatus.style.display = 'none';
+    }
+  };
+
+  updateModelStatus();
+  setInterval(updateModelStatus, 2000);
 
   // Listeners
   globalToggle.addEventListener('change', async () => {
@@ -40,12 +72,24 @@ async function init() {
       if (consent) {
         data.settings.aiConsent = true;
         data.settings.aiMode = 'mobilenet';
+        // Trigger load
+        chrome.runtime.sendMessage({
+          target: 'background',
+          type: 'CHECK_IMAGE',
+          data: { url: '' },
+        });
       } else {
         aiToggle.checked = false;
         return;
       }
     } else if (aiToggle.checked) {
       data.settings.aiMode = 'mobilenet';
+      // Trigger load
+      chrome.runtime.sendMessage({
+        target: 'background',
+        type: 'CHECK_IMAGE',
+        data: { url: '' },
+      });
     } else {
       data.settings.aiMode = 'none';
     }

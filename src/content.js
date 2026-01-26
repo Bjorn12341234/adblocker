@@ -2,41 +2,58 @@ import { getStorage } from './lib/storage';
 import { scanAndFilter } from './lib/dom';
 
 let keywords = [];
-let enabled = false;
+let observer = null;
 
 async function init() {
-  const data = await getStorage();
+  try {
+    const data = await getStorage();
 
-  // Check if disabled for this site
-  const domain = window.location.hostname;
-  if (
-    data.settings.enabledGlobal === false ||
-    data.lists.whitelist.includes(domain)
-  ) {
-    console.log('Trump Filter: Disabled for this site/globally');
-    return;
-  }
+    // Check if disabled for this site
+    const domain = window.location.hostname;
+    if (
+      data.settings.enabledGlobal === false ||
+      data.lists.whitelist.includes(domain)
+    ) {
+      console.log('Trump Filter: Disabled for this site/globally');
+      return;
+    }
 
-  keywords = data.lists.userKeywords;
-  enabled = true;
+    keywords = data.lists.userKeywords;
 
-  if (keywords.length > 0) {
-    // Initial scan
-    scanAndFilter(keywords, data.settings);
+    if (keywords.length > 0) {
+      // Initial scan
+      scanAndFilter(keywords, data.settings);
 
-    // Observe for dynamic content
-    const observer = new MutationObserver(
-      debounce(() => {
-        scanAndFilter(keywords, data.settings);
-      }, 500)
-    );
+      // Observe for dynamic content
+      observer = new MutationObserver(
+        debounce(() => {
+          scanAndFilter(keywords, data.settings);
+        }, 500)
+      );
 
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+    }
+  } catch (error) {
+    if (error.message.includes('Extension context invalidated')) {
+      console.log(
+        'Trump Filter: Context invalidated. Please refresh the page.'
+      );
+    } else {
+      console.error('Trump Filter Init Error:', error);
+    }
   }
 }
+
+// Cleanup on unload
+window.addEventListener('unload', () => {
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
+});
 
 function debounce(func, wait) {
   let timeout;
