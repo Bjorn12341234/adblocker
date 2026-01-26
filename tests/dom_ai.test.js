@@ -139,6 +139,6 @@ describe('DOM AI Scanning', () => {
 
     const img = document.getElementById('grey-img');
     expect(img.style.filter).toBe('blur(20px)');
-    expect(img.dataset.trumpFilterHidden).toBe('true');
+    expect(img.dataset.orangeFilterHidden).toBe('true');
   });
 });

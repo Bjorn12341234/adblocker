@@ -14,7 +14,7 @@ async function init() {
       data.settings.enabledGlobal === false ||
       data.lists.whitelist.includes(domain)
     ) {
-      console.log('Trump Filter: Disabled for this site/globally');
+      console.log('Orange Filter: Disabled for this site/globally');
       return;
     }
 
@@ -39,10 +39,10 @@ async function init() {
   } catch (error) {
     if (error.message.includes('Extension context invalidated')) {
       console.log(
-        'Trump Filter: Context invalidated. Please refresh the page.'
+        'Orange Filter: Context invalidated. Please refresh the page.'
       );
     } else {
-      console.error('Trump Filter Init Error:', error);
+      console.error('Orange Filter Init Error:', error);
     }
   }
 }

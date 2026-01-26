@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 const path = require('path');
 const fs = require('fs');
 
-describe('Trump Filter E2E', () => {
+describe('Orange Filter E2E', () => {
   let browser;
   let page;
   const EXTENSION_PATH = path.resolve(__dirname, '../dist');
@@ -46,11 +46,13 @@ describe('Trump Filter E2E', () => {
           contentType: 'text/html',
           body: testPageContent,
         });
-      } else if (url.includes('mytestsite.com/assets/trump_small.jpg')) {
+      } else if (url.includes('mytestsite.com/assets/orange_small.jpg')) {
         request.respond({
           status: 200,
           contentType: 'image/jpeg',
-          body: fs.readFileSync(path.join(__dirname, 'assets/trump_small.jpg')),
+          body: fs.readFileSync(
+            path.join(__dirname, 'assets/orange_small.jpg')
+          ),
         });
       } else if (url.includes('mytestsite.com/assets/safe.jpg')) {
         request.respond({
@@ -97,7 +99,7 @@ describe('Trump Filter E2E', () => {
         hidden:
           article &&
           (window.getComputedStyle(article).display === 'none' ||
-            article.dataset.trumpFilterHidden === 'true'),
+            article.dataset.orangeFilterHidden === 'true'),
       };
     });
     console.log('Text Match Result:', textMatchResult);
@@ -110,7 +112,7 @@ describe('Trump Filter E2E', () => {
         hidden:
           img &&
           (window.getComputedStyle(img).display === 'none' ||
-            img.dataset.trumpFilterHidden === 'true'),
+            img.dataset.orangeFilterHidden === 'true'),
       };
     });
     console.log('Alt Match Result:', altMatchResult);
@@ -126,10 +128,10 @@ describe('Trump Filter E2E', () => {
         hidden:
           img &&
           (window.getComputedStyle(img).display === 'none' ||
-            img.dataset.trumpFilterHidden === 'true'),
-        scanning: img && img.dataset.trumpFilterScanning === 'true',
-        debug: img && img.dataset.trumpFilterDebug,
-        error: img && img.dataset.trumpError,
+            img.dataset.orangeFilterHidden === 'true'),
+        scanning: img && img.dataset.orangeFilterScanning === 'true',
+        debug: img && img.dataset.orangeFilterDebug,
+        error: img && img.dataset.orangeError,
       };
     });
     console.log('AI Match Result:', aiMatchResult);
@@ -143,7 +145,7 @@ describe('Trump Filter E2E', () => {
         visible:
           img &&
           window.getComputedStyle(img).display !== 'none' &&
-          img.dataset.trumpFilterHidden !== 'true',
+          img.dataset.orangeFilterHidden !== 'true',
       };
     });
     console.log('Safe Image Result:', safeResult);

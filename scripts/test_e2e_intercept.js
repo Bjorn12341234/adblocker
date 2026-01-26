@@ -54,7 +54,7 @@ async function runTest() {
       const style = window.getComputedStyle(el);
       return {
         display: style.display,
-        hiddenAttr: el.getAttribute('data-trump-filter-hidden'),
+        hiddenAttr: el.getAttribute('data-orange-filter-hidden'),
         html: el.outerHTML.substring(0, 100),
       };
     });

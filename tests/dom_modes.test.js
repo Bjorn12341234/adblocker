@@ -10,11 +10,11 @@ describe('DOM Filtering Modes', () => {
 
   test('scanAndFilter hides text containers in default mode', () => {
     document.body.innerHTML = `
-      <article id="match">Trump wins something</article>
+      <article id="match">Orange wins something</article>
       <div class="card" id="no-match">Sky is blue</div>
     `;
 
-    scanAndFilter(['trump'], { sensitivity: 'balanced' });
+    scanAndFilter(['orange'], { sensitivity: 'balanced' });
 
     expect(document.getElementById('match').style.display).toBe('none');
     expect(document.getElementById('no-match').style.display).not.toBe('none');
@@ -22,11 +22,11 @@ describe('DOM Filtering Modes', () => {
 
   test('scanAndFilter DOES NOT hide text containers in "pictures-only" mode', () => {
     document.body.innerHTML = `
-      <article id="match">Trump wins something</article>
+      <article id="match">Orange wins something</article>
       <div class="card" id="no-match">Sky is blue</div>
     `;
 
-    scanAndFilter(['trump'], { sensitivity: 'pictures-only' });
+    scanAndFilter(['orange'], { sensitivity: 'pictures-only' });
 
     // Text container should NOT be hidden
     expect(document.getElementById('match').style.display).not.toBe('none');
@@ -35,11 +35,11 @@ describe('DOM Filtering Modes', () => {
 
   test('scanAndFilter STILL hides images in "pictures-only" mode', () => {
     document.body.innerHTML = `
-      <img id="bad-img" alt="Donald Trump in Florida" src="trump.jpg">
+      <img id="bad-img" alt="The Orange in Florida" src="orange.jpg">
       <img id="good-img" alt="A cute cat" src="cat.jpg">
     `;
 
-    scanAndFilter(['trump'], { sensitivity: 'pictures-only' });
+    scanAndFilter(['orange'], { sensitivity: 'pictures-only' });
 
     // Image should still be hidden
     expect(document.getElementById('bad-img').style.display).toBe('none');

@@ -40,11 +40,13 @@ describe('New Model Integration Check', () => {
           contentType: 'text/html',
           body: testPageContent,
         });
-      } else if (url.includes('trump_small.jpg')) {
+      } else if (url.includes('orange_small.jpg')) {
         request.respond({
           status: 200,
           contentType: 'image/jpeg',
-          body: fs.readFileSync(path.join(__dirname, 'assets/trump_small.jpg')),
+          body: fs.readFileSync(
+            path.join(__dirname, 'assets/orange_small.jpg')
+          ),
         });
       } else if (url.includes('safe.jpg')) {
         request.respond({
@@ -86,7 +88,7 @@ describe('New Model Integration Check', () => {
       await page.waitForFunction(
         () => {
           const img = document.querySelector('#img-ai-match');
-          return img && img.dataset.trumpFilterDebug;
+          return img && img.dataset.orangeFilterDebug;
         },
         { timeout: 40000 }
       );
@@ -99,7 +101,7 @@ describe('New Model Integration Check', () => {
     // 5. Check the debug info
     const debugInfo = await page.evaluate(() => {
       const img = document.querySelector('#img-ai-match');
-      return img ? img.dataset.trumpFilterDebug : null;
+      return img ? img.dataset.orangeFilterDebug : null;
     });
 
     console.log('Debug Info:', debugInfo);
@@ -108,7 +110,7 @@ describe('New Model Integration Check', () => {
     const parsed = JSON.parse(debugInfo);
     expect(parsed.layer).toBe('teachable-machine');
     expect(parsed.isBlocked).toBe(true);
-    // Teachable machine model should give high confidence for trump image
+    // Teachable machine model should give high confidence for orange image
     expect(parsed.confidence).toBeGreaterThan(0.85);
   }, 60000);
 });

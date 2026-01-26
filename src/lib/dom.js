@@ -79,7 +79,7 @@ export async function scanAndFilter(
     const elements = document.querySelectorAll(selectors.join(', '));
 
     elements.forEach((el) => {
-      if (el.dataset.trumpFilterHidden === 'true') return;
+      if (el.dataset.orangeFilterHidden === 'true') return;
 
       if (containsKeywords(el, keywords)) {
         hideElement(el, 'Container matched keywords');
@@ -89,14 +89,14 @@ export async function scanAndFilter(
 
   // 2. Filter Images (Layer 3 - Contextual)
   const images = document.querySelectorAll(
-    'img:not([data-trump-filter-hidden="true"]):not([data-trump-filter-revealed="true"])'
+    'img:not([data-orange-filter-hidden="true"]):not([data-orange-filter-revealed="true"])'
   );
 
   const imagesToScanAI = [];
 
   images.forEach((img) => {
     // Check if parent container is already hidden by us
-    if (img.closest('[data-trump-filter-hidden="true"]')) return;
+    if (img.closest('[data-orange-filter-hidden="true"]')) return;
 
     const context = getImageContext(img);
     if (keywords.some((k) => context.toLowerCase().includes(k.toLowerCase()))) {
@@ -105,7 +105,7 @@ export async function scanAndFilter(
       settings.aiMode &&
       settings.aiMode !== 'none' &&
       settings.aiConsent &&
-      !img.dataset.trumpFilterScanning
+      !img.dataset.orangeFilterScanning
     ) {
       // Mark for AI Scanning (Layer 2)
       imagesToScanAI.push(img);
@@ -145,7 +145,7 @@ async function safeSendMessage(message) {
     return await chrome.runtime.sendMessage(message);
   } catch (error) {
     if (error.message.includes('Extension context invalidated')) {
-      // console.warn('Trump Filter: Extension context invalidated. Reload page to resume filtering.');
+      // console.warn('Orange Filter: Extension context invalidated. Reload page to resume filtering.');
       return { success: false, error: 'Extension context invalidated' };
     }
     throw error;
@@ -166,7 +166,7 @@ async function scanImagesAI(images, settings) {
     const img = queue.shift();
 
     // Skip if already scanning or small images (re-check)
-    if (img.dataset.trumpFilterScanning || img.width < 50 || img.height < 50) {
+    if (img.dataset.orangeFilterScanning || img.width < 50 || img.height < 50) {
       return processNext();
     }
 
@@ -176,7 +176,7 @@ async function scanImagesAI(images, settings) {
       return processNext();
     }
 
-    img.dataset.trumpFilterScanning = 'true';
+    img.dataset.orangeFilterScanning = 'true';
 
     try {
       let payload = { url: src, sensitivity: settings.sensitivity };
@@ -222,7 +222,7 @@ async function scanImagesAI(images, settings) {
       });
 
       if (response) {
-        img.dataset.trumpFilterDebug = JSON.stringify(response);
+        img.dataset.orangeFilterDebug = JSON.stringify(response);
       }
 
       if (response && response.success) {
@@ -236,9 +236,9 @@ async function scanImagesAI(images, settings) {
       }
     } catch (error) {
       console.error('Error scanning image with AI:', error);
-      img.dataset.trumpError = error.toString();
+      img.dataset.orangeError = error.toString();
     } finally {
-      delete img.dataset.trumpFilterScanning;
+      delete img.dataset.orangeFilterScanning;
       processNext();
     }
   };
@@ -257,8 +257,8 @@ function hideElement(el, reason) {
   } else {
     el.style.display = 'none';
   }
-  el.dataset.trumpFilterHidden = 'true';
-  console.log(`Trump Filter: Hidden an element (${reason}).`);
+  el.dataset.orangeFilterHidden = 'true';
+  console.log(`Orange Filter: Hidden an element (${reason}).`);
 
   // Track stats
   incrementBlockedCount(1);
@@ -268,15 +268,15 @@ export function blurElement(el, reason) {
   el.style.filter = 'blur(20px)';
   el.style.cursor = 'pointer';
   el.title = `Filtered: ${reason} (Click to show / Right-click to report)`;
-  el.dataset.trumpFilterHidden = 'true'; // Count as hidden for mutation observer purposes
+  el.dataset.orangeFilterHidden = 'true'; // Count as hidden for mutation observer purposes
 
   el.addEventListener('click', function onClick(e) {
     e.stopPropagation();
     el.style.filter = '';
     el.style.cursor = '';
     el.title = '';
-    el.dataset.trumpFilterHidden = 'false';
-    el.dataset.trumpFilterRevealed = 'true';
+    el.dataset.orangeFilterHidden = 'false';
+    el.dataset.orangeFilterRevealed = 'true';
     el.removeEventListener('click', onClick);
   });
 
@@ -285,19 +285,19 @@ export function blurElement(el, reason) {
     e.stopPropagation();
     if (confirm('Report this image as a False Positive?')) {
       console.log(
-        `Trump Filter: User reported false positive (blur) for ${el.src || el.currentSrc}. Reason: ${reason}`
+        `Orange Filter: User reported false positive (blur) for ${el.src || el.currentSrc}. Reason: ${reason}`
       );
       el.click(); // Reveal it too
     }
   });
 
-  console.log(`Trump Filter: Blurred an element (${reason}).`);
+  console.log(`Orange Filter: Blurred an element (${reason}).`);
   incrementBlockedCount(1);
 }
 
 function createPlaceholder(img, reason) {
   const placeholder = document.createElement('div');
-  placeholder.className = 'trump-filter-placeholder';
+  placeholder.className = 'orange-filter-placeholder';
   placeholder.title = `Filtered: ${reason}`;
 
   // Copy relevant styles for layout preservation
@@ -350,7 +350,7 @@ function createPlaceholder(img, reason) {
   report.addEventListener('click', (e) => {
     e.stopPropagation();
     console.log(
-      `Trump Filter: User reported false positive for ${img.src || img.currentSrc}. Reason: ${reason}`
+      `Orange Filter: User reported false positive for ${img.src || img.currentSrc}. Reason: ${reason}`
     );
     placeholder.click();
     alert('Thank you for your report! (Logged to console)');
@@ -361,8 +361,8 @@ function createPlaceholder(img, reason) {
     e.stopPropagation();
     placeholder.remove();
     img.style.display = '';
-    img.dataset.trumpFilterHidden = 'false';
-    img.dataset.trumpFilterRevealed = 'true';
+    img.dataset.orangeFilterHidden = 'false';
+    img.dataset.orangeFilterRevealed = 'true';
   });
 
   return placeholder;

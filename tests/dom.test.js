@@ -25,7 +25,7 @@ describe('DOM Filtering', () => {
     scanAndFilter(['trump']);
 
     expect(document.getElementById('match').style.display).toBe('none');
-    expect(document.getElementById('match').dataset.trumpFilterHidden).toBe(
+    expect(document.getElementById('match').dataset.orangeFilterHidden).toBe(
       'true'
     );
     expect(document.getElementById('no-match').style.display).not.toBe('none');
@@ -35,7 +35,7 @@ describe('DOM Filtering', () => {
   test('scanAndFilter ignores already hidden elements', () => {
     document.body.innerHTML = '<article id="item">Trump</article>';
     const el = document.getElementById('item');
-    el.dataset.trumpFilterHidden = 'true';
+    el.dataset.orangeFilterHidden = 'true';
     el.style.display = 'block';
 
     scanAndFilter(['trump']);
@@ -46,7 +46,7 @@ describe('DOM Filtering', () => {
 
   test('scanAndFilter hides images based on alt text', () => {
     document.body.innerHTML = `
-      <img id="bad-img" alt="Donald Trump in Florida" src="trump.jpg">
+      <img id="bad-img" alt="Donald Trump in Florida" src="orange.jpg">
       <img id="good-img" alt="A cute cat" src="cat.jpg">
     `;
 
@@ -78,7 +78,7 @@ describe('DOM Filtering', () => {
 
     scanAndFilter(['trump']);
 
-    const placeholder = document.querySelector('.trump-filter-placeholder');
+    const placeholder = document.querySelector('.orange-filter-placeholder');
     expect(placeholder).not.toBeNull();
     expect(placeholder.textContent).toBe(
       'Filtered Content (Click to show)Report False Positive'
@@ -92,15 +92,15 @@ describe('DOM Filtering', () => {
 
     scanAndFilter(['trump']);
 
-    const placeholder = document.querySelector('.trump-filter-placeholder');
+    const placeholder = document.querySelector('.orange-filter-placeholder');
     expect(img.style.display).toBe('none');
 
     placeholder.click();
 
     expect(img.style.display).toBe('');
-    expect(img.dataset.trumpFilterHidden).toBe('false');
-    expect(img.dataset.trumpFilterRevealed).toBe('true');
-    expect(document.querySelector('.trump-filter-placeholder')).toBeNull();
+    expect(img.dataset.orangeFilterHidden).toBe('false');
+    expect(img.dataset.orangeFilterRevealed).toBe('true');
+    expect(document.querySelector('.orange-filter-placeholder')).toBeNull();
   });
 
   test('blurElement applies blur and reveals on click', () => {
@@ -110,12 +110,12 @@ describe('DOM Filtering', () => {
     blurElement(img, 'test reason');
 
     expect(img.style.filter).toBe('blur(20px)');
-    expect(img.dataset.trumpFilterHidden).toBe('true');
+    expect(img.dataset.orangeFilterHidden).toBe('true');
 
     img.click();
 
     expect(img.style.filter).toBe('');
-    expect(img.dataset.trumpFilterHidden).toBe('false');
-    expect(img.dataset.trumpFilterRevealed).toBe('true');
+    expect(img.dataset.orangeFilterHidden).toBe('false');
+    expect(img.dataset.orangeFilterRevealed).toBe('true');
   });
 });

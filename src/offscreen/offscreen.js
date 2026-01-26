@@ -126,26 +126,26 @@ async function predict(imageElement, threshold = 0.85) {
     const probabilities = predictions.dataSync(); // Float32Array
 
     // 6. Map to labels
-    // Labels are loaded from metadata: e.g., ["Trump", "Safe", "Hard negatives"]
-    const trumpIndex = labels.indexOf('Trump');
+    // Labels are loaded from metadata: e.g., ["Orange", "Safe", "Hard negatives"]
+    const orangeIndex = labels.indexOf('Orange');
 
-    if (trumpIndex === -1) {
-      console.error('Label "Trump" not found in metadata');
+    if (orangeIndex === -1) {
+      console.error('Label "Orange" not found in metadata');
       return { isBlocked: false, confidence: 0 };
     }
 
-    const trumpScore = probabilities[trumpIndex];
+    const orangeScore = probabilities[orangeIndex];
 
     // Threshold check
-    const isBlocked = trumpScore > threshold;
+    const isBlocked = orangeScore > threshold;
 
     console.log(
-      `Prediction: ${trumpScore} (Threshold: ${threshold}) -> Blocked: ${isBlocked}`
+      `Prediction: ${orangeScore} (Threshold: ${threshold}) -> Blocked: ${isBlocked}`
     );
 
     return {
       isBlocked,
-      confidence: trumpScore,
+      confidence: orangeScore,
       layer: 'teachable-machine',
     };
   });

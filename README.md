@@ -2,7 +2,7 @@
 
 A privacy-first Chrome Extension that filters specific topics (default: "Orange") from your browsing feed using Network blocking, DOM text analysis, and local AI image processing.
 
-## 📥 Quick Install (No Coding Required)
+## Quick Install (No Coding Required)
 
 1.  **Download:** Get the `the-orange-filter-v1.zip` file from this repository.
 2.  **Unpack:** Unzip the file to a folder on your computer.
@@ -13,7 +13,7 @@ A privacy-first Chrome Extension that filters specific topics (default: "Orange"
 
 ---
 
-## 🚀 For Developers (Build from source)
+## For Developers (Build from source)
 
 If you want to build the extension yourself:
 
@@ -29,7 +29,7 @@ If you want to build the extension yourself:
     - Click **Load unpacked**.
     - Select the **`dist`** folder inside this project directory.
 
-## 🎮 How to Test
+## How to Test
 
 ### Manual Testing
 
@@ -52,7 +52,7 @@ Run the included unit and integration tests:
 npm test
 ```
 
-## 🛠️ Development
+## Development
 
 - **Watch Mode:** `npm run watch` (Rebuilds on file changes).
 - **Linting:** `npm run lint` (Checks code style).

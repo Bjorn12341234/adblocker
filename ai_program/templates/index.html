@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trump or Not?</title>
+    <title>Orange or Not?</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <style>
@@ -68,11 +68,11 @@
             min-height: 1.2em;
         }
 
-        .trump {
+        .orange {
             color: #e53e3e;
         }
 
-        .not-trump {
+        .not-orange {
             color: #38a169;
         }
 
@@ -102,7 +102,7 @@
 <body>
 
     <div class="container">
-        <h1>Trump Detector</h1>
+        <h1>Orange Detector</h1>
         
         <div id="drop-zone">
             <p>Drag & Drop an image here<br>or click to upload</p>
@@ -228,13 +228,13 @@
             
             loader.style.display = 'none';
             
-            // Logic based on labels: ["Trump", "Safe", "Hard negatives"]
-            if (bestClass === "Trump") {
+            // Logic based on labels: ["Orange", "Safe", "Hard negatives"]
+            if (bestClass === "Orange") {
                 resultDiv.innerText = "TRUMP";
-                resultDiv.className = "trump";
+                resultDiv.className = "orange";
             } else {
                 resultDiv.innerText = "NOT TRUMP";
-                resultDiv.className = "not-trump";
+                resultDiv.className = "not-orange";
             }
             
             console.log(prediction);

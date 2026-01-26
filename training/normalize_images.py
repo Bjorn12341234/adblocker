@@ -95,7 +95,7 @@ def main():
     if len(sys.argv) != 2:
         print("Usage: python3 scripts/normalize_images.py /path/to/dataset")
         print("\nNote: Your dataset should be organized into folders by class name, e.g.:")
-        print("  dataset/trump/")
+        print("  dataset/orange/")
         print("  dataset/safe/")
         sys.exit(1)
 

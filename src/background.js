@@ -1,6 +1,6 @@
 import { updateRules, sendMessageToOffscreen } from './lib/backgroundLogic';
 
-console.log('Trump Filter Background Service Started');
+console.log('Orange Filter Background Service Started');
 
 // Initialize on install/update
 chrome.runtime.onInstalled.addListener(async () => {

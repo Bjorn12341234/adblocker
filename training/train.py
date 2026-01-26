@@ -119,7 +119,7 @@ def train():
     import json
     metadata = {
         "labels": labels,
-        "modelName": "MobileNetV3Small-TrumpFilter",
+        "modelName": "MobileNetV3Small-OrangeFilter",
         "version": "2.0.0",
         "inputRange": "[0, 255] (Internal Norm)"
     }

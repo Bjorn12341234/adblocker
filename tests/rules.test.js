@@ -23,13 +23,13 @@ describe('Rule Generator', () => {
   });
 
   test('generates block rules for keywords', () => {
-    const rules = generateRules({ whitelist: [], userKeywords: ['trump'] });
+    const rules = generateRules({ whitelist: [], userKeywords: ['orange'] });
     expect(rules).toHaveLength(1);
     expect(rules[0]).toMatchObject({
       priority: 10,
       action: { type: 'block' },
       condition: {
-        urlFilter: '*trump*',
+        urlFilter: '*orange*',
         resourceTypes: ['main_frame'],
         isUrlFilterCaseSensitive: false,
       },

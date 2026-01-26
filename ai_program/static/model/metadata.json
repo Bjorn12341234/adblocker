@@ -6,6 +6,6 @@
   "timeStamp": "2026-01-26T19:04:53.228Z",
   "userMetadata": {},
   "modelName": "tm-my-image-model",
-  "labels": ["Trump", "Safe", "Hard negatives"],
+  "labels": ["Orange", "Safe", "Hard negatives"],
   "imageSize": 224
 }

@@ -82,7 +82,7 @@ async function runTest() {
     const textMatchHidden = await page.$eval('#text-match', (el) => {
       return (
         window.getComputedStyle(el).display === 'none' ||
-        el.hasAttribute('data-trump-filter-hidden')
+        el.hasAttribute('data-orange-filter-hidden')
       );
     });
     console.log('Text Match Hidden:', textMatchHidden);
