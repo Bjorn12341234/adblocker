@@ -4200,7 +4200,7 @@
               {
                 "class_name": "Dense",
                 "config": {
-                  "units": 3,
+                  "units": 4,
                   "activation": "softmax",
                   "use_bias": false,
                   "kernel_initializer": {
@@ -4970,7 +4970,7 @@
         { "name": "dense_Dense1/bias", "shape": [100], "dtype": "float32" },
         {
           "name": "dense_Dense2/kernel",
-          "shape": [100, 3],
+          "shape": [100, 4],
           "dtype": "float32"
         },
         { "name": "bn_Conv1/moving_mean", "shape": [16], "dtype": "float32" },
