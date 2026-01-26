@@ -17,3 +17,5 @@ project_dump.txt
 all_files.py
 *.zip
 
+# Training data
+training/datasets/
