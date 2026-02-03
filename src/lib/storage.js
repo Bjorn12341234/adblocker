@@ -4,7 +4,7 @@ const DEFAULT_SETTINGS = {
     enabledGlobal: true,
     sensitivity: 'balanced',
     aiMode: 'mobilenet',
-    aiConsent: true,
+    aiConsent: false,
   },
   lists: {
     whitelist: ['example.com'],

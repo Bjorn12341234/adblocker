@@ -53,7 +53,7 @@ async function init() {
   };
 
   updateModelStatus();
-  setInterval(updateModelStatus, 2000);
+  setInterval(updateModelStatus, 5000);
 
   // Listeners
   globalToggle.addEventListener('change', async () => {

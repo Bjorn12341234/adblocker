@@ -14,19 +14,58 @@ async function loadSettings() {
   whitelist.value = data.lists.whitelist.join('\n');
 }
 
+function isValidDomain(domain) {
+  // Basic domain validation - allows subdomains and TLDs
+  return /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(domain);
+}
+
+function isValidKeyword(keyword) {
+  // Keywords should be alphanumeric with spaces, no special regex chars
+  return /^[a-zA-Z0-9\s\-']+$/.test(keyword) && keyword.length <= 100;
+}
+
 async function saveSettings() {
   const data = await getStorage();
 
   data.settings.sensitivity = sensitivity.value;
-  data.lists.userKeywords = userKeywords.value
+
+  const keywords = userKeywords.value
     .split('\n')
     .map((k) => k.trim())
     .filter((k) => k !== '');
 
-  data.lists.whitelist = whitelist.value
+  const invalidKeywords = keywords.filter((k) => !isValidKeyword(k));
+  if (invalidKeywords.length > 0) {
+    status.textContent = 'Invalid keywords: ' + invalidKeywords.join(', ');
+    status.style.color = '#f44336';
+    status.style.display = 'inline';
+    setTimeout(() => {
+      status.style.display = 'none';
+      status.style.color = '';
+      status.textContent = 'Saved!';
+    }, 3000);
+    return;
+  }
+  data.lists.userKeywords = keywords;
+
+  const domains = whitelist.value
     .split('\n')
     .map((d) => d.trim())
     .filter((d) => d !== '');
+
+  const invalidDomains = domains.filter((d) => !isValidDomain(d));
+  if (invalidDomains.length > 0) {
+    status.textContent = 'Invalid domains: ' + invalidDomains.join(', ');
+    status.style.color = '#f44336';
+    status.style.display = 'inline';
+    setTimeout(() => {
+      status.style.display = 'none';
+      status.style.color = '';
+      status.textContent = 'Saved!';
+    }, 3000);
+    return;
+  }
+  data.lists.whitelist = domains;
 
   await setStorage(data);
 
