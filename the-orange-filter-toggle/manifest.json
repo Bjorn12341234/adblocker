@@ -5,6 +5,11 @@
   "description": "A smart content filter with a reversible toggle: Lock Her Up filters out political content, Lock Him Up shows ONLY political content.",
   "version": "1.0.0",
   "homepage_url": "https://bjorn12341234.github.io/adblocker/",
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  },
   "permissions": [
     "storage",
     "offscreen",
@@ -18,7 +23,11 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "The Orange Filter Settings"
+    "default_title": "The Orange Filter Settings",
+    "default_icon": {
+      "16": "assets/icons/icon16.png",
+      "48": "assets/icons/icon48.png"
+    }
   },
   "options_ui": {
     "page": "options.html",
