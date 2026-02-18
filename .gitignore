@@ -16,6 +16,7 @@ context.md
 project_dump.txt
 all_files.py
 *.zip
+!theorangefilter.zip
 
 # Training data
 training/datasets/ai_program/
