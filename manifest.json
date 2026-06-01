@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "TheOrangeFilter",
-  "short_name": "OrangeFilter",
-  "description": "A smart content filter that blocks specific political figures from your browsing experience.",
-  "version": "1.0.0",
+  "name": "The Orange Filter",
+  "short_name": "Orange Filter",
+  "description": "The Orange Filter - a customizable content filter that hides topics and keywords you choose from your browsing feed.",
+  "version": "1.0.1",
   "permissions": ["storage", "offscreen", "declarativeNetRequest", "activeTab"],
   "host_permissions": ["<all_urls>"],
   "background": {
