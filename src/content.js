@@ -262,7 +262,14 @@
       'img:not([data-orange-filter-hidden="true"]):not([data-orange-filter-revealed="true"])'
     );
     const imagesToScan = [];
+    const aiOn =
+      settings.aiMode && settings.aiMode !== 'none' && settings.aiConsent;
 
+    // Sprint 3.1: the keyword/caption path hides captioned Trump images, but it
+    // must NOT starve the AI — every image whose context does NOT match a
+    // keyword (bare/uncaptioned photos, memes, image-search thumbs) is the AI's
+    // job (Sprint 3.2). Those are queued here regardless of surrounding text.
+    let contextHidden = 0;
     images.forEach((img) => {
       if (img.closest('[data-orange-filter-hidden="true"]')) return;
 
@@ -273,15 +280,25 @@
         )
       ) {
         hideElement(img, 'Image context match');
+        contextHidden++;
         return;
       }
 
-      if (settings.aiMode && settings.aiMode !== 'none' && settings.aiConsent) {
-        if (!img.dataset.orangeFilterScanning) {
-          imagesToScan.push(img);
-        }
+      if (aiOn && !img.dataset.orangeFilterScanning) {
+        imagesToScan.push(img);
       }
     });
+
+    if (aiOn) {
+      // Sprint 2.4: make the AI's reach observable instead of silent. If this
+      // logs "0 queued" on a Trump page, the AI is being starved by the keyword
+      // path; if it queues images but nothing hides, the pipeline/model is at
+      // fault — either way it's now visible in the page console.
+      console.debug(
+        `[OrangeFilter] image pass: ${contextHidden} hidden by caption, ` +
+          `${imagesToScan.length} queued for AI`
+      );
+    }
 
     if (imagesToScan.length > 0) {
       await scanImagesWithAI(imagesToScan, settings);
@@ -295,11 +312,11 @@
       if (queue.length === 0) return;
 
       const img = queue.shift();
-      if (
-        img.dataset.orangeFilterScanning ||
-        img.width < 50 ||
-        img.height < 50
-      ) {
+      // Use rendered OR intrinsic size — lazy-loaded / just-injected images can
+      // report width 0 before layout, which previously skipped them silently.
+      const w = img.width || img.naturalWidth || 0;
+      const h = img.height || img.naturalHeight || 0;
+      if (img.dataset.orangeFilterScanning || w < 50 || h < 50) {
         return scanNext();
       }
 
@@ -323,6 +340,10 @@
               payload.type = 'base64';
             }
           } catch (e) {
+            // Canvas is tainted (cross-origin, no CORS) — fall back to a
+            // content-side fetch; if that also fails the background fetches the
+            // URL itself (it has <all_urls> host permission). See Sprint 2.4.
+            console.debug('[OrangeFilter] canvas tainted, falling back:', e);
             blob = await fetchImageBlob(imgSrc);
           }
         }
@@ -343,6 +364,14 @@
           data: payload,
         });
 
+        // Sprint 2.4: stamp every scanned image with its outcome so the AI path
+        // is inspectable in the DOM (and consumed by the integration test).
+        img.dataset.orangeFilterDebug = JSON.stringify({
+          src: imgSrc.slice(0, 80),
+          sentData: payload.data ? 'inline' : 'url-only',
+          ...(result || { success: false, error: 'no response' }),
+        });
+
         if (result && result.success) {
           const confidence = Math.round(result.confidence * 100);
 
@@ -351,9 +380,25 @@
           } else if (result.confidence > 0.65) {
             blurElement(img, `AI low confidence (${confidence}%)`);
           }
+        } else {
+          console.debug(
+            '[OrangeFilter] AI scan returned no block:',
+            imgSrc.slice(0, 80),
+            result
+          );
         }
-      } catch {
-        // Image scan failures (CORS, decode errors) are expected — skip silently
+      } catch (err) {
+        // Sprint 2.4: don't swallow — surface so we can tell a real failure
+        // (CORS, decode, model error) from "the AI simply never ran".
+        console.debug(
+          '[OrangeFilter] AI scan error:',
+          imgSrc.slice(0, 80),
+          err
+        );
+        img.dataset.orangeFilterDebug = JSON.stringify({
+          src: imgSrc.slice(0, 80),
+          error: String(err && err.message ? err.message : err),
+        });
       } finally {
         delete img.dataset.orangeFilterScanning;
         scanNext();

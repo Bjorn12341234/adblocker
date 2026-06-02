@@ -162,16 +162,23 @@ _Goal: know whether the model loads-but-misses or errors, then fix accordingly._
   match** against reference Trump photos (far more accurate for a person filter).
 - **2.3** _If it errors:_ fix offscreen/model loading (WASM paths, CSP `wasm-unsafe-eval`,
   `loadLayersModel` vs `loadGraphModel`, label index).
-- **2.4** Stop swallowing scan errors silently. `scanImagesWithAI`'s `catch {}` hides the
-  real failure — log/surface errors during development.
+- **2.4** ✅ **DONE (2026-06-02).** `scanImagesWithAI` no longer swallows errors: the
+  empty `catch {}` now logs the real failure, and **every scanned image is stamped with
+  `data-orange-filter-debug`** (JSON: src, whether data was sent inline vs url-only, and
+  the model result/error). The image pass also logs `N hidden by caption, M queued for AI`.
+  This is the lens for the live test: "0 queued" = starvation; "queued but no block" =
+  pipeline/model.
 
 ## Sprint 3 — Make the AI actually contribute (architecture)
 
 _Goal: the AI catches Trump images the keyword path can't — uncaptioned photos, memes._
 
-- **3.1** Stop the keyword path from starving the AI: run the AI on Trump-candidate
-  images **even when a caption matched**, or promote the AI to the primary image filter
-  and use keywords only for text blocks.
+- **3.1** ✅ **DONE (2026-06-02).** The image pass now explicitly queues every
+  non-caption-matched image for the AI (bare/uncaptioned photos — the AI's actual job),
+  and the queue is observable via the log above. The `width < 50` skip now also checks
+  `naturalWidth`/`naturalHeight`, so lazy-loaded / just-injected images (the exact case
+  that showed `everScanned: false`) are no longer dropped before layout. _Still pending
+  live confirmation in-browser — see "How to test 3.1+2.4" below._
 - **3.2** Define the AI's job explicitly: catch **bare/uncaptioned** Trump images
   (image search, social feeds, memes) — the gap keywords structurally cannot fill.
 - **3.3** Tune thresholds per sensitivity once the model is known-good (currently
@@ -235,3 +242,19 @@ _Goal: stop hiding software/Stewart/warning._
 - Could **not** inspect `chrome://extensions`, the popup, or the offscreen/service-worker
   console — the browser-automation tool is sandboxed off Chrome's internal pages. The
   offscreen console (model load logs) needs a manual paste, or use Sprint 2.1 instead.
+
+---
+
+## How to test 3.1 + 2.4 locally (next manual run)
+
+1. `npm run build`, then load **unpacked** `dist/` at `chrome://extensions` (Developer mode).
+2. Make sure AI is on (popup toggle, or Options → Enable Local AI Scanning — now wired).
+3. Open a Trump-heavy page (Google Images `trump`) and open **DevTools → Console** on the
+   page. Look for `[OrangeFilter] image pass: X hidden by caption, Y queued for AI`.
+   - **Y = 0** → still starved (captions catch everything); the AI's real test is an
+     uncaptioned page / injected `data:` images.
+   - **Y > 0** → AI is running; watch for `AI scan error` / `AI scan returned no block`.
+4. Inspect any scanned `<img>` for `data-orange-filter-debug` — it now carries the model
+   result (or the error). `sentData: "url-only"` means the background fetched it; an
+   `error` field means the scan genuinely failed (the previously-hidden case).
+5. To eval the model offline without Chrome: `node scripts/eval_model.js [imgs...]`.
