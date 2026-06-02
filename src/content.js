@@ -238,13 +238,21 @@
   }
 
   async function filterContent(keywords, settings = {}, extraSelectors = []) {
-    if (!keywords || keywords.length === 0) return;
+    const aiOn = aiEnabled(settings);
+    const hasKeywords = !!(keywords && keywords.length > 0);
 
-    // Merge user keywords with extra keywords
-    const allKeywords = [...keywords, ...EXTRA_KEYWORDS];
+    // Sprint 3.1: the AI must be able to run on its own. Previously this bailed
+    // whenever the keyword list was empty, so "disable keywords + AI only" did
+    // nothing at all. Now keyword filtering runs when there are keywords, and
+    // the AI image scan runs whenever AI is enabled — independently.
+    if (!hasKeywords && !aiOn) return;
 
-    // Filter text content (if not pictures-only mode)
-    if (settings.sensitivity !== 'pictures-only') {
+    // EXTRA_KEYWORDS only augment an explicit user keyword list; in pure AI mode
+    // (no user keywords) we do NOT silently apply them, so the AI is tested alone.
+    const allKeywords = hasKeywords ? [...keywords, ...EXTRA_KEYWORDS] : [];
+
+    // Filter text content (only with keywords, and not in pictures-only mode)
+    if (hasKeywords && settings.sensitivity !== 'pictures-only') {
       const selectors = [...CONTAINER_SELECTORS, ...extraSelectors];
       const containers = document.querySelectorAll(selectors.join(', '));
 
@@ -262,26 +270,25 @@
       'img:not([data-orange-filter-hidden="true"]):not([data-orange-filter-revealed="true"])'
     );
     const imagesToScan = [];
-    const aiOn =
-      settings.aiMode && settings.aiMode !== 'none' && settings.aiConsent;
 
-    // Sprint 3.1: the keyword/caption path hides captioned Trump images, but it
-    // must NOT starve the AI — every image whose context does NOT match a
-    // keyword (bare/uncaptioned photos, memes, image-search thumbs) is the AI's
-    // job (Sprint 3.2). Those are queued here regardless of surrounding text.
+    // The keyword/caption path hides captioned Trump images; the AI's job is
+    // every image whose caption does NOT match (bare/uncaptioned photos, memes,
+    // image-search thumbs). Those are queued for the AI regardless of text.
     let contextHidden = 0;
     images.forEach((img) => {
       if (img.closest('[data-orange-filter-hidden="true"]')) return;
 
-      const context = getImageContext(img);
-      if (
-        allKeywords.some((kw) =>
-          context.toLowerCase().includes(kw.toLowerCase())
-        )
-      ) {
-        hideElement(img, 'Image context match');
-        contextHidden++;
-        return;
+      if (hasKeywords) {
+        const context = getImageContext(img);
+        if (
+          allKeywords.some((kw) =>
+            context.toLowerCase().includes(kw.toLowerCase())
+          )
+        ) {
+          hideElement(img, 'Image context match');
+          contextHidden++;
+          return;
+        }
       }
 
       if (aiOn && !img.dataset.orangeFilterScanning) {
@@ -491,11 +498,20 @@
     );
   }
 
+  function aiEnabled(settings) {
+    return !!(
+      settings &&
+      settings.aiMode &&
+      settings.aiMode !== 'none' &&
+      settings.aiConsent
+    );
+  }
+
   function startObserver() {
     if (observer) return;
     observer = new MutationObserver(
       debounce(() => {
-        if (currentKeywords.length > 0) {
+        if (currentKeywords.length > 0 || aiEnabled(currentSettings)) {
           filterContent(currentKeywords, currentSettings);
         }
       }, 500)
@@ -523,9 +539,13 @@
     currentSettings = config.settings;
     currentKeywords = config.lists.userKeywords || [];
 
-    if (currentKeywords.length > 0) {
+    // Run if EITHER filter is active: keywords (text/caption) OR AI (images).
+    // This is what makes text-only, image-only, and both-on all work.
+    if (currentKeywords.length > 0 || aiEnabled(currentSettings)) {
       await filterContent(currentKeywords, currentSettings);
       startObserver();
+    } else {
+      stopObserver();
     }
   }
 

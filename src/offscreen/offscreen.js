@@ -9,6 +9,10 @@ import {
   image as tfImage,
   setBackend,
   env,
+  cast,
+  div,
+  sub,
+  expandDims,
 } from '@tensorflow/tfjs-core';
 import { loadLayersModel } from '@tensorflow/tfjs-layers';
 import { setWasmPaths } from '@tensorflow/tfjs-backend-wasm';
@@ -80,9 +84,14 @@ async function predict(imageElement, threshold = 0.85) {
       return { isBlocked: false, confidence: 0 };
     }
 
+    // Use functional ops, NOT chained tensor methods (.toFloat()/.div()/...).
+    // The production webpack bundle of tfjs-core does not register the chaining
+    // API, so chained calls throw "toFloat is not a function" at runtime — which
+    // silently broke every AI scan. Same math: resize -> /127.5 - 1 -> batch.
     tensor = tfImage.resizeBilinear(tensor, [224, 224]);
-    tensor = tensor.toFloat().div(127.5).sub(1);
-    tensor = tensor.expandDims(0);
+    tensor = cast(tensor, 'float32');
+    tensor = sub(div(tensor, 127.5), 1);
+    tensor = expandDims(tensor, 0);
 
     const predictions = model.predict(tensor);
     const probabilities = predictions.dataSync();

@@ -173,7 +173,20 @@ _Goal: know whether the model loads-but-misses or errors, then fix accordingly._
 
 _Goal: the AI catches Trump images the keyword path can't — uncaptioned photos, memes._
 
-- **3.1** ✅ **DONE (2026-06-02).** The image pass now explicitly queues every
+> **🎯 ROOT CAUSE CONFIRMED & FIXED (2026-06-02).** A live Puppeteer run of the real
+> extension (`scripts/diagnose_ai.js`) caught the actual failure: every AI scan threw
+> **`toFloat is not a function`** inside the offscreen document, swallowed by the old
+> `catch {}`. Cause: `offscreen.js` preprocessed with **chained tensor methods**
+> (`tensor.toFloat().div(127.5).sub(1).expandDims(0)`), which the production webpack
+> bundle of `tfjs-core` does not register. Fixed by switching to functional ops
+> (`cast`/`div`/`sub`/`expandDims`) — the exact form the Sprint 2.1 Node harness proved.
+> After the fix the same live run scores an uncaptioned Trump photo **0.9946 and hides it**
+> (`isBlocked:true`, `display:none`). The AI image filter now works end-to-end in all
+> modes (text-only, image-only, both).
+
+- **3.1** ✅ **DONE (2026-06-02).** Also decoupled the AI from the keyword list so
+  **image-only mode works** (empty keywords + AI on previously switched the whole pipeline
+  off). The image pass now explicitly queues every
   non-caption-matched image for the AI (bare/uncaptioned photos — the AI's actual job),
   and the queue is observable via the log above. The `width < 50` skip now also checks
   `naturalWidth`/`naturalHeight`, so lazy-loaded / just-injected images (the exact case
