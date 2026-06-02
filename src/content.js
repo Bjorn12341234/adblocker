@@ -421,7 +421,10 @@
   // INITIALIZATION
   // ============================================
 
-  let userKeywords = [];
+  // Live config state — kept in sync with chrome.storage so toggling the
+  // extension / AI / keywords applies to already-open tabs without a reload.
+  let currentKeywords = [];
+  let currentSettings = {};
   let observer = null;
 
   function debounce(func, wait) {
@@ -435,31 +438,63 @@
     };
   }
 
+  function isActive(config) {
+    const hostname = window.location.hostname;
+    return (
+      config.settings.enabledGlobal !== false &&
+      !config.lists.whitelist.includes(hostname)
+    );
+  }
+
+  function startObserver() {
+    if (observer) return;
+    observer = new MutationObserver(
+      debounce(() => {
+        if (currentKeywords.length > 0) {
+          filterContent(currentKeywords, currentSettings);
+        }
+      }, 500)
+    );
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function stopObserver() {
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
+  }
+
+  // Apply a freshly-read config: update live state and (re-)run filtering.
+  // Note: disabling does not un-hide already-hidden content (see Sprint 5.1) —
+  // a reload is still needed to fully restore. This only stops further hiding.
+  async function applyConfig(config) {
+    if (!isActive(config)) {
+      stopObserver();
+      console.debug('Orange Filter: Disabled for this site');
+      return;
+    }
+
+    currentSettings = config.settings;
+    currentKeywords = config.lists.userKeywords || [];
+
+    if (currentKeywords.length > 0) {
+      await filterContent(currentKeywords, currentSettings);
+      startObserver();
+    }
+  }
+
   async function init() {
     try {
-      const config = await loadConfig();
-      const hostname = window.location.hostname;
+      await applyConfig(await loadConfig());
 
-      if (
-        config.settings.enabledGlobal === false ||
-        config.lists.whitelist.includes(hostname)
-      ) {
-        console.debug('Orange Filter: Disabled for this site');
-        return;
-      }
-
-      userKeywords = config.lists.userKeywords;
-
-      if (userKeywords.length > 0) {
-        await filterContent(userKeywords, config.settings);
-
-        observer = new MutationObserver(
-          debounce(() => filterContent(userKeywords, config.settings), 500)
-        );
-
-        observer.observe(document.body, {
-          childList: true,
-          subtree: true,
+      // Re-read settings live. Ignore stats-only writes (updateStats fires on
+      // every hide) to avoid a feedback loop; only settings/lists edits re-apply.
+      if (chrome?.storage?.onChanged) {
+        chrome.storage.onChanged.addListener((changes, area) => {
+          if (area !== 'local') return;
+          if (!changes.settings && !changes.lists) return;
+          loadConfig().then(applyConfig);
         });
       }
     } catch (error) {
@@ -469,12 +504,7 @@
     }
   }
 
-  window.addEventListener('pagehide', () => {
-    if (observer) {
-      observer.disconnect();
-      observer = null;
-    }
-  });
+  window.addEventListener('pagehide', stopObserver);
 
   init();
 })();

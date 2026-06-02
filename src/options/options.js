@@ -3,6 +3,7 @@ import { getStorage, setStorage } from '../lib/storage';
 const sensitivity = document.getElementById('sensitivity');
 const userKeywords = document.getElementById('userKeywords');
 const whitelist = document.getElementById('whitelist');
+const aiEnabled = document.getElementById('aiEnabled');
 const saveBtn = document.getElementById('saveBtn');
 const status = document.getElementById('status');
 
@@ -12,6 +13,7 @@ async function loadSettings() {
   sensitivity.value = data.settings.sensitivity;
   userKeywords.value = data.lists.userKeywords.join('\n');
   whitelist.value = data.lists.whitelist.join('\n');
+  aiEnabled.checked = data.settings.aiMode !== 'none';
 }
 
 function isValidDomain(domain) {
@@ -66,6 +68,10 @@ async function saveSettings() {
     return;
   }
   data.lists.whitelist = domains;
+
+  // AI toggle — keep aiMode/aiConsent in sync with the popup toggle.
+  data.settings.aiMode = aiEnabled.checked ? 'mobilenet' : 'none';
+  data.settings.aiConsent = aiEnabled.checked;
 
   await setStorage(data);
 
