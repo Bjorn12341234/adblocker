@@ -3,7 +3,7 @@
   "name": "The Orange Filter",
   "short_name": "Orange Filter",
   "description": "The Orange Filter - a customizable content filter that hides topics and keywords you choose from your browsing feed.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "permissions": ["storage", "offscreen", "declarativeNetRequest", "activeTab"],
   "host_permissions": ["<all_urls>"],
   "background": {
