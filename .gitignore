@@ -20,6 +20,3 @@ all_files.py
 
 # Training data
 training/datasets/ai_program/
-
-# QA screenshots (large binaries)
-screenshots/
